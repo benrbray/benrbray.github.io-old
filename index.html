@@ -4,67 +4,103 @@
 <head>
     <!-- Metadata -->
 	<meta charset="utf-8">
-    
+
     <!-- Title -->
 	<title>Benjamin R. Bray</title>
+
+	<!-- Google Fonts -->
+	<link href="https://fonts.googleapis.com/css?family=Droid+Sans|Droid+Sans+Mono|Droid+Serif" rel="stylesheet">
 	
-    <!-- Fonts -->
-    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700,400italic' rel='stylesheet' type='text/css'>
-    
 	<!-- Site Styles -->
 	<link rel="stylesheet" href="http://benrbray.com/theme/css/style.css" type="text/css">
+	
 </head>
 
 <body>
 
-<!-- HEADER ------------------------------------------------------------------->
-<div class="header">
-	<div class="header-center">
-		<div class="header-title"></div>
-		<hr>
-		<ul class="nav">
-			<li class="nav-btn"><a href="http://benrbray.com/">Home</a>
-			<!-- Site Pages -->
-			</li><li class="nav-btn"><a href="http://benrbray.com/about">About</a>
-			</li><li class="nav-btn"><a href="http://benrbray.com/projects">Projects</a>
-			</li>
-			<!---------------->
+<!-- CONTENT ------------------------------------------------------------------>
+
+<div id="page">
+	<!-- HEADER -->
+	<div id="header">
+		<div id="header-name">
+			Benjamin R. Bray
+		</div>
+		<ul id="header-nav">
+			<li>WRITING</li>
+			<li>PROJECTS</li>
+			<li>RESOURCES</li>
+			<li>RESUME</li>
 		</ul>
-		<hr>
+	</div>
+	<!-- ABOUT ME -->
+	<div id="about-box">
+		<img src="http://benrbray.com/theme/images/ben-160px.jpg" style="width: 160px; height: 160px; border-radius: 100px; margin-right: 20px;">
+		<div id="about-text">
+			<p style="margin-top: 5px">I'm a first-year PhD student in Computer Science at <b>Georgia Tech</b> interested in <i>statistical learning theory</i> and <i>optimization</i>.  I studied math at the University of Michigan, where I also helped with a machine learning <a href="https://eecs445-f16.github.io/">class</a> and <a href="http://msail.github.io/">reading group</a>.
+			
+			<p>Off-campus I bike, cook, and play piano.  Maybe one day I'll make more <a href="http://www.newgrounds.com/portal/view/512482">games</a>.
+			 
+			<p>If you'd like to chat, feel free to write me at <a href="mailto:benrbray@gatech.edu">benrbray@gatech.edu</a>.
+		</div>
+	</div>
+	<!-- CONTENT -->
+	<div id="content">
+<h1>Selected Projects</h1>
+
+<div id="projects">
+    <div class="project-row">
+        <!-- Project -->
+        <div class="project-box">
+            <div class="project-image"><img src="images/physics.png"></div>
+            <div class="project-title">Game Physics</div>
+            <div class="project-desc">Constraint-based physics solved with Verlet integration.</div>
+        </div>
+        <!-- Project -->
+        <div class="project-box">
+            <div class="project-image"><img src="images/em.png"></div>
+            <div class="project-title">Latent Variables & EM</div>
+            <div class="project-desc">How I wish I had learned it in the first place: with all the details.</div>
+        </div>
+        <!-- Project -->
+        <div class="project-box">
+            <div class="project-image"><img src="images/water.jpg"></div>
+            <div class="project-title">Fluid Simulation</div>
+            <div class="project-desc">Incompressible flow on periodic domain solved with FFT.</div>
+        </div>
+    </div>
+</div>
+
+<h1>Selected Writing</h1>
+
+<div class="post-box">
+    <div class="post-title">Expectation Maximization</div>
+    <span class="post-date">August 5, 2017.</span> Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+</div>
+
+<div class="post-box">
+    <div class="post-title">Collision Detection with the Separating Axis Theorem</div>
+    <span class="post-date">June 17, 2017.</span> At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est, omnis dolor repellendus. Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae. Itaque earum rerum hic tenetur a sapiente delectus, ut aut reiciendis voluptatibus maiores alias consequatur aut perferendis doloribus asperiores repellat.
+</div>
+
+<div class="post-box">
+    <div class="post-title">From Scratch:  Expectation Maximization</div>
+    <span class="post-date">April 18, 2017.</span> Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem.
+</div>
 	</div>
 </div>
 
-<!-- CONTENT ------------------------------------------------------------------>
-
-
-<div class="page">	
-    <!-- Article Loop --------------------------------------------------------->
-	<ul class="post-list">
-            <li class="tile project-tile">
-    			<a href="http://benrbray.com/posts/2015/Aug/21/incompressible-fluid-simulation">
-    				<div class="title">Incompressible Fluid Simulation</div>
-    				<div class="preview"><p>Simulation of two-dimensional incompressible flow with periodic boundary conditions, achieved by solving the Euler Equations in the frequency domain via the Fast Fourier Transform (FFT).  Written in Java.</p></div>
-    				<div class="info">
-    					<div class="tags">POSTED IN [<Tag 'fluid-simulation'>]</div>
-    					<div class="date">2015-08-21 00:00:00-04:00</div>
-    				</div>
-    			</a>
-    		</li>
-            <li class="tile post-tile">
-    			<a href="http://benrbray.com/posts/2015/Aug/19/test-page">
-    				<div class="title">Test Page</div>
-    				<div class="preview"><p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus gravida eros eu consectetur vulputate. Maecenas vestibulum ipsum et sapien dapibus, non maximus mauris finibus. Morbi velit sem, mollis in scelerisque et, consequat sed augue. Suspendisse augue mauris, ultrices in commodo nec, auctor tincidunt sem. Nullam tristique non odio sit amet ...</p></div>
-    				<div class="info">
-    					<div class="tags">POSTED IN </div>
-    					<div class="date">2015-08-19 10:04:00-04:00</div>
-    				</div>
-    			</a>
-    		</li>
-	<ul>
-</div>
-
-
 <!-- FOOTER ------------------------------------------------------------------->
+
+<!-- Page Footer -->
+<div class="center"><div id="page-footer">
+	<span style="float: left">
+		Proudly powered by <a href="http://blog.getpelican.com/">Pelican</a> and hosted on <a href="https://github.com/benrbray/benrbray.github.io-source">GitHub</a>.
+	</span>
+	<span style="float: right">
+		Last updated on September 26, 2017
+	</span>
+</div></div>
 
 <!-- Alex Gorbatchev's SyntaxHighlighter  v3.0.83 -->
 <!--<link href="<?php bloginfo('template_url'); ?>/syntaxhighlighter_3.0.83/styles/shCore.css" rel="stylesheet" type="text/css"/>
@@ -79,7 +115,13 @@
 -->
 
 <!-- MathJax -->
-<script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+});
+</script>
+<script type="text/javascript" async
+  src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML">
 </script>
 
 </body>

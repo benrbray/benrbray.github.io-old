@@ -10,198 +10,159 @@ License URI: http://www.gnu.org/licenses/gpl-2.0.html
 Tags: academic
 */
 
+:root {
+	--min-width: 700px;
+	--max-width: 800px;
+	--serif-fonts:  'Droid Serif', serif;
+	--sans-fonts:  'Segoe UI', 'Ubuntu', sans-serif;
+}
+
 body {
-	padding:  0;
-	margin:  10px;
-	font-family: "Open Sans", Ubuntu, Segoe, "Segoe UI", Candara, Calibri, Arial, sans-serif;
+	margin: 0 40px;
+	font-family: var(--sans-fonts);
 }
 
-/* DEFAULT ELEMENTS ----------------------------------------------------------*/
-
-/* Headings */
-h1, h2, h3 {
-	margin:  15px 0 0 0;
-	padding:  0;
-	font-weight:  bold;
-}
-h4,h5,h6 {
-	margin:  0;
-	padding:  0;
-}
-h1 { font-size:  22px; }
-h2 { font-size:  18px; }
-h3 { font-size:  14px; }
-
-/* Links */
-a {
-	color:  inherit;
-	text-decoration:  none;
+#page {
+	margin: 0 auto;
+	max-width: var(--max-width);
+	min-width: var(--min-width);
 }
 
-/* Misc */
-p {
-	margin:  5px 0;
-}
-hr {
-	border-style:  solid;
-	border-color:  gray;
-	border-width:  1px 0 0 0;
-}
-img {
-	display:  block;
-	margin:  20px auto;
+h1 {
+	margin: 0;
+	font-family: var(--serif-fonts);
+	font-weight: normal;
+	font-size: 28px;
 }
 
-/* PAGE HEADER ---------------------------------------------------------------*/
+/* Header */
 
-.header {
-	position:  relative;
-	margin: 20px auto 20px auto;
+#header {
+	display: flex;
+	align-items: baseline;
+	max-width: var(--max-width);
+	margin-top: 20px;
+	padding: 0 30px;
+}
+
+#header-name {
+	display: inline-block;
+	margin-right: 20px;
+	height: 80px;
 	
-	text-align:  center;
-	color:  black;
-	/*background-color:  #20202F;*/
+	user-select: none;
+	cursor: default;
+	line-height: 80px;
+	vertical-align: middle;
+	font-family: var(--serif-fonts);
+	font-size:  36px;
 }
 
-.header-title {
-	font-size:  40px;
-	font-weight:  bold;
-	width:  auto;
-	height:  80px;
-	margin:  0 auto;
-	background:  white url("../images/benjamin-r-bray.png");
-	background-size:  contain;
-	background-repeat:  no-repeat;
-	background-position:  center;
-}
-
-.header-center{
-	margin:  0 auto;
-	max-width:  700px;
-}
-
-.nav {
-	margin:  0;
-	padding:  0;
-	list-style:  none;
-}
-
-.nav-btn {
-	display:  inline-block;
-	height:  20px;
-	margin:  0 20px;
-	padding:  5px;
-	font-weight: bold;
-	font-size:  16px;
-}
-.nav-btn:hover {
-	background-color:  #eee;
-	text-decoration:  underline;
-}
-.nav-btn::first-of-type {
-	margin-left:  0;
-}
-
-/* PAGE CONTENT --------------------------------------------------------------*/
-
-.page {
-	position:  relative;
-	max-width:  700px;
-	margin:  0 auto;
-	padding:  0 10px 10px 10px;
-	background-color:  #fff;
-}
-
-.post {
-	width: 100%;
-	margin:  0 auto;
-	padding:  10px;
-	float:  left;
-}
-
-.content {
-	position:  relative;
-	text-align:  justify;
-}
-
-.post-header {
-	margin:  50px 0;
-	text-align:  center;
-}
-
-.post-header .post-title {
-	display:  inline-block;
-	font-weight:  bold;
-	font-size:  32px;
-}
-
-.post-header .post-info {
-	color:  gray;
-}
-
-/* POST LISTING --------------------------------------------------------------*/
-
-.post-list {
-	margin:  0;
+#header-nav {
+	display: flex;
+	flex-grow: 1;
+	margin: 0;
 	padding: 0;
-	list-style:  none;
+	
+	list-style-type: none;
+	font-family: var(--sans-fonts);
+	font-size: 18px;
 }
 
-/* Tile */
-.tile {
-	display:  block;
-	margin:  10px 0;
-	padding:  10px;
-}
-.tile .title {
-	margin:  0 0 10px 0;
-	font-weight:  bold;
-	font-size:  24px;
-	color:  #a0a0a0;
-	text-align:  center;
-}
-.tile:hover .title {
-	color:  #666;
-}
-.tile .preview {
-	text-align:  justify;
-}
-.tile .info {
-	margin-top:  10px;
-	font-size:  12px;
-	color:  gray;
+#header-nav li {
+	display: inline-block;
+	flex-grow: 1;
+	
+	color: #999;
+	text-align: center;
+	vertical-align: center;
+	
+	cursor: pointer;
+	user-select: none;
 }
 
-/* Post Tile */
-.post-tile::after {
-	content:  "";
-	width:  100%;
-	border-bottom:  1px solid gray;
-}
-.post-tile:hover {
-	background-color:  #eee;
-}
-.post-tile .tags {
-	position:  static;
-	float: right;
+#header-nav li:hover {
+	color: #000;
+	cursor: pointer;
 }
 
-/* Project Tile */
-.project-tile {
-	background-color:  #ddd;
-}
-.project-tile:hover {
-	background-color:  #ccc;
+/* About Me */
+
+#about-box {
+	display: flex;
+	margin-bottom: 30px;
+	padding: 15px 30px;
+	background-color: #e7e7e7;
 }
 
-/* SIDEBAR -------------------------------------------------------------------*/
+#about-text {
+	text-align: justify;
+}
 
-.sidebar {
-	position:  relative;
-	top:  0;
-	right:  0;
-	float:  left;
-	margin-top:  0;
-	width:  300px;
-	height:  100px;
+/* Content */
+
+#content {
+	padding: 0 30px;
+	max-width: var(--max-width);
+}
+
+/* Projects */
+
+.project-row {
+	display: flex;
+	margin: 0 -40px;
+}
+
+.project-box {
+	flex-grow: 1;
+	flex-basis: 0;
+	padding: 20px 10px;
+}
+
+.project-image {
+	display: block;
+	width: 100%;
+	height: 160px;
+	margin-bottom: 20px;
+	border-radius: 6px;
+	overflow: hidden;
+}
+
+.project-image img {
+	width: 100%;
+	height: auto;
+}
+
+.project-title {
+	margin-bottom: 10px;
+	text-align: center;
+	font-family: var(--serif-fonts);
+	font-size: 22px;
+}
+
+.project-desc {
+	color: gray;
+	text-align: center;
+}
+
+/* Posts */
+
+.post-box {
+	margin: 20px 0;
+	text-align: justify;
+}
+
+.post-title {
+	font-size: 22px;
+	margin-bottom: 10px;
+}
+
+.post-date {
+	margin-right: 10px;
+	color: #aaa;
+	font-style: italic;
+}
+
+.post-desc {
+	
 }

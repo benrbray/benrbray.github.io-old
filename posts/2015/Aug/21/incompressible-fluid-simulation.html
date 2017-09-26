@@ -4,62 +4,181 @@
 <head>
     <!-- Metadata -->
 	<meta charset="utf-8">
-    
+
     <!-- Title -->
 	<title>Benjamin R. Bray</title>
+
+	<!-- Google Fonts -->
+	<link href="https://fonts.googleapis.com/css?family=Droid+Sans|Droid+Sans+Mono|Droid+Serif" rel="stylesheet">
 	
-    <!-- Fonts -->
-    <link href='https://fonts.googleapis.com/css?family=Open+Sans:400,700,400italic' rel='stylesheet' type='text/css'>
-    
 	<!-- Site Styles -->
 	<link rel="stylesheet" href="http://benrbray.com/theme/css/style.css" type="text/css">
+	
+
+<script>
+window.onload = function(){
+	buildTableOfContents();
+}
+
+var headings = [];
+
+function buildTableOfContents(){
+	// get document headings
+	var pageContent = document.getElementById("page-content");
+	var headingTags = ["h1", "h2", "h3", "h4", "h5", "h6"];
+	var headings = getElementsByTagNames(pageContent, headingTags);
+	var headingData = [];
+	
+	// process headings
+	for(var k = 0; k < headings.length; k++){
+		// get heading data
+		var elem = headings[k];
+		var title = elem.innerText;
+		var id =  k + "-" + title.toLowerCase().replace(/\W+/g, "-");
+		var depth = parseInt(elem.tagName.substr(1));
+		
+		headingData.push({
+			url: "#" + id,
+			title: title,
+			depth: depth
+		})
+		
+		// set heading ids
+		elem.id = id;
+	};
+	
+	// build table of contents
+	var toc;
+	var lastDepth = -1;
+	
+	for(var k = headings.length-1; k >= 0; k--){
+		var heading = headingData[k];
+		
+		if(heading.depth < lastDepth || lastDepth < 0) {
+			// handle leaf nodes
+		} else {
+			// handle internal nodes
+		}
+	}
+	
+	// construct hierarchy
+	console.log(headingData);
+}
+
+function arrayToHierarchy(numbers){
+	var result = [];
+	
+	var current = -1;
+	var prev = -1;
+	
+	for(var k = numbers.length-1; k >= 0; k--){
+		var current = numbers[k];
+		
+		if(current > prev){
+			// handle leaf node
+			
+		}
+		if(current < prev){
+			// parent node
+		} else {
+			// sibling node
+			result.unshift(current);
+		}
+	}
+}
+
+function headingTextToId(headingText){
+	
+}
+
+/* GETELEMENTSBYTAGNAMES
+ * Returns all children of `parentElement` with any of the provided tags, in
+ * document order.
+ */
+function getElementsByTagNames(parentElement, tagNames){
+	// get all tags
+	var elements = [];
+	tagNames.forEach(function(tag){
+		var result = parentElement.getElementsByTagName(tag);
+		elements = elements.concat([].slice.call(result));
+	});
+	
+	// sort elements in document order
+	return elements.sort(documentOrderComparator);
+}
+
+/* DOCUMENTORDERCOMPARATOR
+ * Returns +1 if `a` follows `b`, -1 if `a` precedes `b`, or 0 otherwise.
+ */
+function documentOrderComparator(a, b){
+	// identity check
+	if(a == b) return 0;
+	// compare positions
+	var position = a.compareDocumentPosition(b);
+	if(position & 20) return -1;
+	if(position & 10) return 1;
+	return 0;
+}
+</script>
 </head>
 
 <body>
 
-<!-- HEADER ------------------------------------------------------------------->
-<div class="header">
-	<div class="header-center">
-		<div class="header-title"></div>
-		<hr>
-		<ul class="nav">
-			<li class="nav-btn"><a href="http://benrbray.com/">Home</a>
-			<!-- Site Pages -->
-			</li><li class="nav-btn"><a href="http://benrbray.com/about">About</a>
-			</li><li class="nav-btn"><a href="http://benrbray.com/projects">Projects</a>
-			</li>
-			<!---------------->
+<!-- CONTENT ------------------------------------------------------------------>
+
+<div id="page">
+	<!-- HEADER -->
+	<div id="header">
+		<div id="header-name">
+			Benjamin R. Bray
+		</div>
+		<ul id="header-nav">
+			<li>WRITING</li>
+			<li>PROJECTS</li>
+			<li>RESOURCES</li>
+			<li>RESUME</li>
 		</ul>
-		<hr>
+	</div>
+	<!-- ABOUT ME -->
+	<div id="about-box">
+		<img src="http://benrbray.com/theme/images/ben-160px.jpg" style="width: 160px; height: 160px; border-radius: 100px; margin-right: 20px;">
+		<div id="about-text">
+			<p style="margin-top: 5px">I'm a first-year PhD student in Computer Science at <b>Georgia Tech</b> interested in <i>statistical learning theory</i> and <i>optimization</i>.  I studied math at the University of Michigan, where I also helped with a machine learning <a href="https://eecs445-f16.github.io/">class</a> and <a href="http://msail.github.io/">reading group</a>.
+			
+			<p>Off-campus I bike, cook, and play piano.  Maybe one day I'll make more <a href="http://www.newgrounds.com/portal/view/512482">games</a>.
+			 
+			<p>If you'd like to chat, feel free to write me at <a href="mailto:benrbray@gatech.edu">benrbray@gatech.edu</a>.
+		</div>
+	</div>
+	<!-- CONTENT -->
+	<div id="content">
+<div class="center">
+
+<!-- Post Header -->
+<div class="post-header">
+	<div class="post-title">Incompressible Fluid Simulation</div>
+	<div class="post-info">
+		Posted in projects on August 21, 2015
 	</div>
 </div>
 
-<!-- CONTENT ------------------------------------------------------------------>
+<!-- Table of Contents (Requires JavaScript) -->
+<div id="toc" class="inline">
+Loading table of contents...
+</div>
 
-
-<div class="page">	
-	<div class="post">
-	    <!-- Post Header ------------------------------------------------------>
-		<div class="post-header">
-			<div class="post-title">Incompressible Fluid Simulation</div>
-			<div class="post-info">
-				Posted in projects
-				<br>
-				2015-08-21 00:00:00-04:00</div>
-		</div>
-		
-		<div class="content">
-			<p>Simulation of two-dimensional incompressible flow with periodic boundary conditions, achieved by solving the Euler Equations in the frequency domain via the Fast Fourier Transform (FFT).  Written in Java.</p>
+<!-- Post Context -->
+<div class="content">
+	<p>Simulation of two-dimensional incompressible flow with periodic boundary conditions, achieved by solving the Euler Equations in the frequency domain via the Fast Fourier Transform (FFT).  Written in Java.</p>
 <p><img alt="Fluid Simulation" src="http://benrbray.com/images/fluid.png" /></p>
 <p>Based on the following excellent resources:</p>
 <ul>
 <li>Stam, Jos. Stable Fluids. SIGGRAPH 99, Los Angeles, CA.</li>
 <li>Bridson, Robert, and Matthias Müller-Fischer. Fluid Simulation. SIGGRAPH 07. Course Notes.</li>
 </ul>
-		</div>
-	</div>
-	
-	<!-- Disqus --------------------------------------------------------------->
+</div>
+
+<!-- Disqus ------------------------------------------------------------------->
 
 <div id="disqus_thread"></div>
 
@@ -82,11 +201,22 @@ var disqus_url = "http://benrbray.com/posts/2015/Aug/21/incompressible-fluid-sim
 
 <a href="http://disqus.com" class="dsq-brlink">comments powered by <span class="logo-disqus">Disqus</span></a>
 
-	
+
+</div>
+	</div>
 </div>
 
-
 <!-- FOOTER ------------------------------------------------------------------->
+
+<!-- Page Footer -->
+<div class="center"><div id="page-footer">
+	<span style="float: left">
+		Proudly powered by <a href="http://blog.getpelican.com/">Pelican</a> and hosted on <a href="https://github.com/benrbray/benrbray.github.io-source">GitHub</a>.
+	</span>
+	<span style="float: right">
+		Last updated on September 26, 2017
+	</span>
+</div></div>
 
 <!-- Alex Gorbatchev's SyntaxHighlighter  v3.0.83 -->
 <!--<link href="<?php bloginfo('template_url'); ?>/syntaxhighlighter_3.0.83/styles/shCore.css" rel="stylesheet" type="text/css"/>
@@ -101,7 +231,13 @@ var disqus_url = "http://benrbray.com/posts/2015/Aug/21/incompressible-fluid-sim
 -->
 
 <!-- MathJax -->
-<script type="text/javascript" src="http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+<script type="text/x-mathjax-config">
+MathJax.Hub.Config({
+  tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
+});
+</script>
+<script type="text/javascript" async
+  src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML">
 </script>
 
 </body>

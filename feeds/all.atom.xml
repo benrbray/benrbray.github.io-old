@@ -1,20 +1,167 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Benjamin R. Bray</title><link href="http://benrbray.com/" rel="alternate"></link><link href="http://benrbray.com/feeds/all.atom.xml" rel="self"></link><id>http://benrbray.com/</id><updated>2015-11-26T00:00:00-05:00</updated><entry><title>Expectation Maximization</title><link href="http://benrbray.com/posts/2015/Nov/26/expectation-maximization" rel="alternate"></link><published>2015-11-26T00:00:00-05:00</published><updated>2015-11-26T00:00:00-05:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2015-11-26:posts/2015/Nov/26/expectation-maximization</id><summary type="html">&lt;div style="display:none"&gt;
-$\newcommand{\X}{\mathcal{X}}$
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Benjamin R. Bray</title><link href="http://benrbray.com/" rel="alternate"></link><link href="http://benrbray.com/feeds/all.atom.xml" rel="self"></link><id>http://benrbray.com/</id><updated>2018-05-02T00:00:00-04:00</updated><entry><title>Algorithms for Random Discrete Structures</title><link href="http://benrbray.com/posts/2018/May/02/algorithms-for-random-discrete-structures" rel="alternate"></link><published>2018-05-02T00:00:00-04:00</published><updated>2018-05-02T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2018-05-02:/posts/2018/May/02/algorithms-for-random-discrete-structures</id><summary type="html">&lt;p&gt;Many applications require the random sampling of matrices with prescribed structure for modeling, statistical, or aesthetic purposes.  What does it mean for a random variable to be matrix-valued?  What can we say about the eigenvalues of a random matrix?  How can we design algorithms to sample from a target distribution on a group or manifold?  More generally, what can we say deterministic algorithms with random inputs?  Our study of random matrices will lead us to the &lt;em&gt;subgroup algorithm&lt;/em&gt; (Diaconis 1987), which subsumes many familiar random sampling procedures.&lt;/p&gt;</summary><content type="html">&lt;h1&gt;Introduction&lt;/h1&gt;
+&lt;p&gt;Randomness[ref]footnote[/ref] plays a critical role in computer science and applied mathematics.  In the sciences, randomness allows researchers to study average-case behavior of physical models which would otherwise be too complex or time-consuming to simulate exactly.  In computing, randomized algorithms have become essential tools for approximating NP-Hard problems.&lt;/p&gt;
+&lt;p&gt;In this post, we will survey strategies for designing algorithms to randomly generate objects with nontrivial structure from a prescribed distribution.  For example, we may wish to choose elements uniformly at random from a group or generate a set of random unitary matrices whose behavior is somehow representative of the class of unitary matrices generally.  The samples are intended for use as input to a known model or algorithm.&lt;/p&gt;
+&lt;p&gt;We must take care to distinguish between the three different types of random sampling that are commonly employed.  Genuine &lt;em&gt;uniformly random&lt;/em&gt; samples are easiest to generate, due to independence, but individual realizations will naturally have regions of low and high density.  Our intuitive understanding of uniformity is more like &lt;em&gt;uniformly spaced&lt;/em&gt; samples, where the goal is to maximize coverage and avoid redundancy.  In the extreme, we may want to sample &lt;em&gt;rare events&lt;/em&gt; to study the worst-case behavior of a system.  These differences are shown informally in Figure \ref{fig:kinds-of-randomness}.&lt;/p&gt;
+&lt;p&gt;It also helps to keep the reverse problem in mind:  how does a deterministic algorithm behave when fed random inputs?&lt;/p&gt;
+&lt;h1&gt;Preliminaries&lt;/h1&gt;
+&lt;p&gt;In this section, we briefly review the necessary mathematical background and introduce notation.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Unitary Matrices.&lt;/strong&gt;  A matrix &lt;span class="math"&gt;\(U \in \mathbb{C}^{n \times n}\)&lt;/span&gt; with orthonormal columns is called &lt;em&gt;unitary&lt;/em&gt;.  Equivalently, &lt;span class="math"&gt;\(U U^* = I\)&lt;/span&gt;, where &lt;span class="math"&gt;\(U^*\)&lt;/span&gt; denotes the conjugate transpose.  The eigenvalues of a unitary matrix have unit modulus, and accordingly &lt;span class="math"&gt;\(|\det U| = 1\)&lt;/span&gt;.  Real matrices &lt;span class="math"&gt;\(M \in \mathbb{R}^{n \times n}\)&lt;/span&gt; satisfying these conditions are called &lt;em&gt;orthogonal&lt;/em&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Groups.&lt;/strong&gt;  A group &lt;span class="math"&gt;\((G,*)\)&lt;/span&gt; consists of an associative operation &lt;span class="math"&gt;\(* : G \times G \rightarrow G\)&lt;/span&gt; over a set &lt;span class="math"&gt;\(G\)&lt;/span&gt; which contains a (unique) identity element &lt;span class="math"&gt;\(1_G\)&lt;/span&gt; and a (unique) inverse &lt;span class="math"&gt;\(a^{-1}\)&lt;/span&gt; for each element &lt;span class="math"&gt;\(a \in G\)&lt;/span&gt;, with &lt;span class="math"&gt;\(a^{-1} a = a a^{-1} = 1_G\)&lt;/span&gt;.  For convenience, we call &lt;span class="math"&gt;\(a * b\)&lt;/span&gt; multiplication and occasionally write &lt;span class="math"&gt;\(ab\)&lt;/span&gt; instead.  Additive notation &lt;span class="math"&gt;\(a +b\)&lt;/span&gt; is used for commutative groups.  A set &lt;span class="math"&gt;\(S \subset G\)&lt;/span&gt; is a &lt;em&gt;subgroup&lt;/em&gt; if it is closed under multiplication and inverses with respect to the group operation. &lt;/p&gt;
+&lt;p&gt;Familiar commutative groups are &lt;span class="math"&gt;\((\mathbb{Z}, +)\)&lt;/span&gt;, &lt;span class="math"&gt;\((\mathbb{Q}, +)\)&lt;/span&gt;, and &lt;span class="math"&gt;\((\mathbb{R}_{\neq 0}, \cdot)\)&lt;/span&gt;.  The invertible matrices over a field &lt;span class="math"&gt;\(F\)&lt;/span&gt; form a non-commutative group &lt;span class="math"&gt;\(\mathrm{GL}_n(F)\)&lt;/span&gt; with respect to matrix multiplication, known as the &lt;em&gt;general linear group&lt;/em&gt;.  The orthogonal matrices &lt;span class="math"&gt;\(\mathrm{O}_n(\mathbb{R})\)&lt;/span&gt; and unitary matrices &lt;span class="math"&gt;\(\mathrm{U}_n(\mathbb{C})\)&lt;/span&gt; both form subgroups of &lt;span class="math"&gt;\(\mathrm{GL}_n(\mathbb{C})\)&lt;/span&gt;. The &lt;em&gt;special linear group&lt;/em&gt; &lt;span class="math"&gt;\(\mathrm{SL}_n(\mathbb{C})\)&lt;/span&gt; is the set of matrices with determinant one.&lt;/p&gt;
+&lt;p&gt;Groups of transformations are useful for understanding the &lt;em&gt;invariants&lt;/em&gt; of an object.  The set of all permutations on &lt;span class="math"&gt;\(n\)&lt;/span&gt; elements forms the &lt;em&gt;symmetric group&lt;/em&gt; &lt;span class="math"&gt;\(S_n\)&lt;/span&gt; with respect to function composition.  An important subgroup is the &lt;em&gt;alternating group&lt;/em&gt; &lt;span class="math"&gt;\(A_n\)&lt;/span&gt; consisting of only even permutations.  For a full treatment of group theory, see (Pinter 2010).&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Topological Groups.&lt;/strong&gt; Of particular interest are groups whose underlying set possesses additional topological or geometric structure.  Studying transformations on such spaces, e.g. homotopy groups in algebraic topology, can reveal important invariant structure which does not readily present itself through other methods.  In this report, we favor intuition at the expense of rigor, so be warned that statements below may require slight modifications to be technically correct.&lt;/p&gt;
+&lt;p&gt;A &lt;em&gt;Lie group&lt;/em&gt; is a smooth manifold &lt;span class="math"&gt;\(G\)&lt;/span&gt; with group structure such that the multiplication and inverse maps are smooth. A &lt;em&gt;Haar measure&lt;/em&gt; on a compact topological group &lt;span class="math"&gt;\(G\)&lt;/span&gt; is a Borel measure (defined on a &lt;span class="math"&gt;\(\sigma\)&lt;/span&gt;-algebra containing the open sets) which is invariant under the group operation, that is, &lt;span class="math"&gt;\(\mu(gE) = \mu(E)\)&lt;/span&gt; for any &lt;span class="math"&gt;\(g \in G\)&lt;/span&gt; and measurable &lt;span class="math"&gt;\(E \subset G\)&lt;/span&gt;.  We sometimes describe this as "translation" or "rotation" invariance depending on the context.  Every compact Lie group has a unique Haar measure &lt;span class="math"&gt;\(\mu\)&lt;/span&gt;, which can easily be normalized to a probability measure since &lt;span class="math"&gt;\(\mu(G) &amp;lt; +\infty\)&lt;/span&gt;.  For a proof, see (Tao 2011).  The general linear group &lt;span class="math"&gt;\(GL_n(\mathbb{C})\)&lt;/span&gt; is not compact, but the groups &lt;span class="math"&gt;\(\mathrm{O}_n(\mathbb{R})\)&lt;/span&gt;, &lt;span class="math"&gt;\(\mathrm{U}_n(\mathbb{C})\)&lt;/span&gt;, and &lt;span class="math"&gt;\(SL_n(\mathbb{C})\)&lt;/span&gt; are compact.  For this reason, they are sometimes called the &lt;em&gt;classical compact groups&lt;/em&gt;.  Our goal is to generate random samples from these groups according to the Haar measure, which can be thought of as a generalization of the uniform distribution.&lt;/p&gt;
+&lt;h1&gt;Random Matrix Theory&lt;/h1&gt;
+&lt;p&gt;A &lt;em&gt;matrix ensemble&lt;/em&gt; is a family of matrices together with a probability distribution.  The most well-studied examples are:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;em&gt;Gaussian Orthogonal Ensemble&lt;/em&gt;, with i.i.d. real entries &lt;span class="math"&gt;\(\mathcal{N}(0,1)\)&lt;/span&gt;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;Gaussian Unitary Ensemble&lt;/em&gt;, with i.i.d. complex entries &lt;span class="math"&gt;\(\mathcal{N}(0,1) + i \mathcal{N}(0,1)\)&lt;/span&gt;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;Gaussian Symplectic Ensemble&lt;/em&gt;, with i.i.d. quaternion entries &lt;span class="math"&gt;\(\mathcal{N} + i \mathcal{N} + j \mathcal{N} + k \mathcal{N}\)&lt;/span&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Note that these processes do not necessarily produce orthogonal or unitary matrices; the name comes from the orthogonal / unitary invariance of the corresponding probability measures, as in the following lemma:&lt;/p&gt;
+&lt;!-- Lemma --&gt;
+
+&lt;div class="theorem"&gt;
+&lt;span class="label"&gt;Lemma.&lt;/span&gt; (c.f. Mezzadri 2006)
+The measure $d\mu_G$ of the Gaussian Unitary Ensemble is invariant under left and right multiplication of $Z$ by arbitrary unitary matrices,
+    $$
+    d\mu_G(UZ) = d\mu_G(ZV) = d\mu_G(Z) \text{ for all } U,V \in \mathrm{U}_n(\mathbb{C})
+    $$
 &lt;/div&gt;
 
-&lt;h2&gt;Introduction&lt;/h2&gt;
+&lt;h2&gt;Eigenvalues and The Circular Law&lt;/h2&gt;
+&lt;p&gt;The eigenvalues of a random matrix are themselves random, and it is natural to ask with what distribution.  One might suspect that the particular choice of distribution for the matrix entries would determine the asymptotic behavior; however, the &lt;em&gt;universality principle&lt;/em&gt; (Tao 2010) states that the choice does not matter in the limit, effectively absolving us of our guilt for not choosing a more complicated distribution than the standard normal.  The eigenvalue distribution of matrices with independent Gaussian entries has long been known to obey the &lt;em&gt;circular law&lt;/em&gt;, and universality immediately gives the following theorem.  A related &lt;em&gt;semicircular law&lt;/em&gt; is known for random Hermitian matrices. &lt;/p&gt;
+&lt;!-- Theorem: Circular Law --&gt;
+
+&lt;div class="theorem"&gt;
+&lt;span class="label"&gt;Theorem.&lt;/span&gt; (Tao 2008) Let $x$ be a complex random variable of mean zero and unit variance.  Let $M_n \in \mathbb{C}^{n \times n}$ be a random matrix whose entries are i.i.d. copies of $x$.  In the limit $n \rightarrow \infty$, the empirical distribution of the eigenvalues of $\frac{1}{\sigma \sqrt{n}} M_n$ converges (both in probability almost surely) to the uniform distribution over the complex unit disk.
+&lt;/div&gt;
+
+&lt;p&gt;The circular law is verified empirically in Figure \ref{fig:goe-gue-eigs} for the Gaussian ensembles.  For the real case on the right, there is an unexpected concentration of eigenvalues exactly on the real line, suggesting that the eigenvalue distribution is &lt;em&gt;not absolutely continuous&lt;/em&gt; with respect to Lebesgue measure.  The joint eigenvalue density for the GOE was worked out explicitly by (Edelman 1997) and integrated, leading to the following computation:&lt;/p&gt;
+&lt;!-- Theorem:  Probability that GOE has real eigenvalues --&gt;
+
+&lt;div class="theorem"&gt;
+&lt;span class="label"&gt;Theorem.&lt;/span&gt; (Edelman 1997)
+Let $M \in \mathbb{R}^{n \times n}$ have independent standard normal entries.  The probability that $M$ has $k$ eigenvalues has the form $r + s\sqrt{2}$ for some rational $r,s \in \mathbb{Q}$.  In particular, the probability that a random matrix has all real eigenvalues is $1 / 2^{n(n-1)/4}$.
+&lt;/div&gt;
+
+&lt;h2&gt;Random Structured Matrices&lt;/h2&gt;
+&lt;p&gt;Some applications call for matrices with additional structure.  For example, it may be desirable to generate random diagonal, symmetric, orthogonal, or upper-triangular matrices.  One might think of several clever ways to accomplish this in Python:&lt;/p&gt;
+&lt;style&gt;
+#clever-table {
+    border-spacing: 20px 0;
+}
+#clever-table td:nth-child(1) {
+    text-align: right;
+    margin-right: 10px;
+}
+#clever-table td:nth-child(2) {
+    font-family: monospace;
+    font-size: 14px;
+}
+&lt;/style&gt;
+
+&lt;table id="clever-table"style="margin: 0 auto;"&gt;
+    &lt;colgroup&gt;
+        &lt;col style="width: 50%"&gt;
+        &lt;col style="width: 50%"&gt;
+    &lt;/colgroup&gt;
+    &lt;tr&gt;&lt;td&gt;Real&lt;/td&gt;&lt;td&gt;A = randn(n,n)&lt;td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;Complex&lt;/td&gt;&lt;td&gt;B = randn(n,n) + 1j * randn(n,n)&lt;td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;Diagonal&lt;/td&gt;&lt;td&gt;D = diag(diag(A))&lt;td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;Symmetric&lt;/td&gt;&lt;td&gt;S = A + A.T&lt;td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;Orthogonal&lt;/td&gt;&lt;td&gt;Q,_ = qr(A)&lt;td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;Upper-triangular&lt;/td&gt;&lt;td&gt;_,R = qr(A)&lt;td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;Lower-triangular&lt;/td&gt;&lt;td&gt;L = chol(A)&lt;td&gt;&lt;/tr&gt;
+&lt;/table&gt;
+
+&lt;p&gt;These methods certainly produce matrices of the desired type, but for serious applications it is important to understand the resulting distributions.  Furthermore, the general problem of understanding how deterministic algorithms (such as the &lt;code&gt;numpy&lt;/code&gt;} implementation of QR factorization) is useful for algorithm design.  In the next section, we show that the naive method for generating random unitary matrices is biased and suggest a correction.&lt;/p&gt;
+&lt;h1&gt;Random Unitary Matrices&lt;/h1&gt;
+&lt;p&gt;Assume we wish to generate random unitary matrices according to the Haar measure on &lt;span class="math"&gt;\(U_n(\mathbb{C})\)&lt;/span&gt;.  The eigenvalues &lt;span class="math"&gt;\(e^{i\theta}\)&lt;/span&gt; of a unitary matrix have unit modulus, so we are effectively choosing random arguments &lt;span style="white-space: pre;"&gt;&lt;span class="math"&gt;\(\theta\)&lt;/span&gt;,&lt;/span&gt; which we would like to be uniform on the complex unit circle.  As shown in Figure \ref{fig:random-unitary-histogram}, the naive method &lt;code&gt;U,_ = qr(B)&lt;/code&gt; applied to a random &lt;code&gt;B&lt;/code&gt; with compex Gaussian entries fails to have a uniform eigenvalue distribution.&lt;/p&gt;
+&lt;p&gt;As described by (Mezzadri 2006), this sampling bias arises from the fact that the QR factorization is not unique.  If &lt;span class="math"&gt;\(Z \in \mathrm{GL}_n(\mathbb{C})\)&lt;/span&gt; factorizes as &lt;span class="math"&gt;\(Z = QR\)&lt;/span&gt; and &lt;span class="math"&gt;\(\Lambda = \mathrm{diag}(e^{i\theta_1}, \dots, e^{i\theta_n})\)&lt;/span&gt; is any diagonal unitary matrix, then &lt;span class="math"&gt;\(Z = (Q \Lambda) (\Lambda^{-1}R)\)&lt;/span&gt; is also a valid QR factorization.  In effect, the QR factorization is a &lt;em&gt;multi-valued map&lt;/em&gt;
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$
+    \mathrm{QR} : \mathrm{GL}_n(\mathbb{C}) \rightarrow \mathrm{U}_n(\mathbb{C}) \times T_n(\mathbb{C})
+    $$&lt;/div&gt;
+&lt;p&gt;
+where &lt;span class="math"&gt;\(T_n(\mathbb{C})\)&lt;/span&gt; is the group of invertible upper triangular matrices.  Different QR factorization algorithms choose different principal values, often in an inconsistent way, which is the source of our error.&lt;/p&gt;
+&lt;h2&gt;The Corrected Algorithm&lt;/h2&gt;
+&lt;p&gt;To ensure that the QR decomposition with random input produces a unitary matrix distributed according to the Haar measure, we must choose a variation of the map above which is not only single valued but also one-to-one.  We need the following lemma.  Let &lt;span class="math"&gt;\(\Lambda_n(\mathbb{C})\)&lt;/span&gt; denote the group of unitary diagonal matrices.&lt;/p&gt;
+&lt;!-- Lemma --&gt;
+
+&lt;div class="theorem"&gt;
+&lt;span class="label"&gt;Lemma.&lt;/span&gt;
+Let $Z \in \mathbb{C}^{n \times n}$ have two valid QR decompositions $Z = Q_1 R_1 = Q_2 R_2$.  Then, there is $\Lambda \in \Lambda_n(\mathbb{C})$ such that $Q_2 = Q_2 \Lambda^{-1}$ and $R_2 = \Lambda R_1$.
+&lt;/div&gt;
+
+&lt;p&gt;Consider the quotient group &lt;span class="math"&gt;\(\Gamma_n(\mathbb{C}) = T_n(\mathbb{C}) / \Lambda_n(\mathbb{C})\)&lt;/span&gt;.  Our corrected algorithm will be a one-to-one map
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$
+    \widehat{\mathrm{QR}} : \mathrm{GL}_n(\mathbb{C}) \rightarrow \mathrm{U}_n(\mathbb{C}) \times \Gamma_n(C)
+    $$&lt;/div&gt;
+&lt;p&gt;
+The upper-rectangular matrix returned by the corrected algorithm will be a representative &lt;span class="math"&gt;\(\gamma\)&lt;/span&gt; of &lt;span class="math"&gt;\(\Gamma_n(\mathbb{C})\)&lt;/span&gt;.  If we choose the map &lt;span class="math"&gt;\(\widehat{\mathrm{QR}}\)&lt;/span&gt; to be unitarily invariant with respect to &lt;span class="math"&gt;\(\gamma\)&lt;/span&gt;, that is,
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$
+    Z \mapsto (Q, \gamma) \implies UZ \mapsto (UQ, \gamma) \text{ for all } U \in \mathrm{U}_n(\mathbb{C})
+    $$&lt;/div&gt;
+&lt;p&gt;
+then by Lemma \ref{lemma:gue-invariance}, the algorithm &lt;span class="math"&gt;\(\widehat{\mathrm{QR}}\)&lt;/span&gt; with input from a Gaussian Unitary Ensemble will be distributed according to the Haar measure on &lt;span class="math"&gt;\(U_n(\mathbb{C})\)&lt;/span&gt;.  It can be shown that the unitary invariance property holds when representatives for &lt;span class="math"&gt;\(\Gamma_n(\mathbb{C})\)&lt;/span&gt; are chosen from the set of upper triangular matrices with real, positive entries.  This suggests the following correction to the naive algorithm.  The results are shown on the right in Figure \ref{fig:random-unitary-histogram}.&lt;/p&gt;
+&lt;style&gt;
+.highlight {
+    padding: 10px;
+    background-color: #f5f5f5;
+    border: 1px solid #ccc;
+    margin: 10px 0;
+}
+
+.highlight pre {
+    margin: 0;
+    font-size: 12px;
+}
+&lt;/style&gt;
+
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;haar_measure&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;n&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="c1"&gt;# naive method&lt;/span&gt;
+    &lt;span class="n"&gt;Z&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;randn&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;n&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="n"&gt;n&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="n"&gt;j&lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="n"&gt;randn&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;n&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="n"&gt;n&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="n"&gt;np&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;sqrt&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="n"&gt;Q&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="n"&gt;R&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;np&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;linalg&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;qr&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;Z&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="c1"&gt;# correction&lt;/span&gt;
+    &lt;span class="n"&gt;d&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;np&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;diag&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;R&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="n"&gt;PH&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;np&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;diag&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;d&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="n"&gt;np&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;absolute&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;d&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;Q&lt;/span&gt; &lt;span class="o"&gt;@&lt;/span&gt; &lt;span class="n"&gt;PH&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h1&gt;Discussion&lt;/h1&gt;
+&lt;p&gt;We have described several basic results in random matrix theory and developed an algorithm for sampling unitary matrices in a uniform way.  The corrected algorithm in the previous section is a special case of the remarkably general &lt;em&gt;subgroup algorithm&lt;/em&gt; (Diaconis 1987), in which uniform random samples from a group &lt;span class="math"&gt;\(G_n\)&lt;/span&gt; are built up from successive uniform samples from a chain of subgroups &lt;span class="math"&gt;\(G_1 \subset G_2 \subset \cdots G_n\)&lt;/span&gt;.  The Fisher-Yates shuffle is a well-known realization of the subgroup algorithm.  The algorithm is very general, but the main difficulty is generating samples from the quotient groups &lt;span class="math"&gt;\(G_{k} / G_{k-1}\)&lt;/span&gt;.&lt;/p&gt;
+&lt;p&gt;For our specific problem of generating random unitary matrices, we were able to prove that the corrected method produces a result distributed according to Haar measure.  When designing sampling procedures for more complicated structures, this may not be possible, and there has been some work on developing statistical tests on manifolds to determine whether the target distribution has been met (Sepheri 2016).&lt;/p&gt;
+&lt;p&gt;I am aware that Lie groups are commonly used in motion planning; the valid orientations of a robot or vehicle form a manifold in configuration space, and there is a group of transformations which describe the allowed behavior.  I strongly suspect that the strategies used in this report could be used to randomly sample valid configurations, which could be useful in simulation or gaming applications.&lt;/p&gt;</content></entry><entry><title>Collision Detection with the Separating Axis Theorem</title><link href="http://benrbray.com/posts/2017/Jun/17/collision-detection-with-the-separating-axis-theorem" rel="alternate"></link><published>2017-06-17T00:00:00-04:00</published><updated>2017-06-17T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2017-06-17:/posts/2017/Jun/17/collision-detection-with-the-separating-axis-theorem</id><summary type="html">&lt;p&gt;In geometry, the hyperplane separation theorem is a theorem about disjoint convex sets in n-dimensional Euclidean space. There are several rather similar versions. In one version of the theorem, if both these sets are closed and at least one of them is compact, then there is a hyperplane in between them and even two parallel hyperplanes in between them separated by a gap. In another version, if both disjoint convex sets are open, then there is a hyperplane in between them, but not necessarily any gap. An axis which is orthogonal to a separating hyperplane is a separating axis, because the orthogonal projections of the convex bodies onto the axis are disjoint.&lt;/p&gt;</summary><content type="html">&lt;p&gt;In geometry, the hyperplane separation theorem is a theorem about disjoint convex sets in n-dimensional Euclidean space. There are several rather similar versions. In one version of the theorem, if both these sets are closed and at least one of them is compact, then there is a hyperplane in between them and even two parallel hyperplanes in between them separated by a gap. In another version, if both disjoint convex sets are open, then there is a hyperplane in between them, but not necessarily any gap. An axis which is orthogonal to a separating hyperplane is a separating axis, because the orthogonal projections of the convex bodies onto the axis are disjoint.&lt;/p&gt;</content></entry><entry><title>Expectation Maximization</title><link href="http://benrbray.com/posts/2015/Nov/26/expectation-maximization" rel="alternate"></link><published>2015-11-26T00:00:00-05:00</published><updated>2015-11-26T00:00:00-05:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2015-11-26:/posts/2015/Nov/26/expectation-maximization</id><summary type="html">&lt;p&gt;These notes provide a theoretical treatment of &lt;strong&gt;Expectation-Maximization&lt;/strong&gt;, an iterative parameter estimation algorithm used to find local maxima of the likelihood function in the presence of hidden variables.  Introductory textbooks (MLAPP, PRML) typically state the algorithm without explanation and expect students to work blindly through derivations.  We find this approach to be unsatisfying, and instead choose to tackle the theory head-on, followed by plenty of examples.  Following (Neal &amp;amp; Hinton 1998), we view expectation-maximization as coordinate ascent on the &lt;strong&gt;Evidence Lower Bound&lt;/strong&gt;.  This perspective takes much of the mystery out of the algorithm and allows us to easily derive variants like &lt;strong&gt;Hard EM&lt;/strong&gt; and &lt;strong&gt;Variational Inference&lt;/strong&gt;.&lt;/p&gt;</summary><content type="html">&lt;style&gt;
+.post-framed {
+    border: 1px solid black;
+    padding: 20px;
+}
+
+.post-framed h3:nth-child(1) {
+    margin-top: 0;
+}
+
+.post-remark {
+    background-color: #eee;
+}
+&lt;/style&gt;
+
+&lt;h1&gt;Introduction&lt;/h1&gt;
 &lt;p&gt;These notes provide a theoretical treatment of &lt;strong&gt;Expectation Maximization&lt;/strong&gt;, an iterative parameter estimation algorithm used to find local maxima of the likelihood function in the presence of hidden variables.  Introductory textbooks [murphy:mlapp, bishop:prml] typically state the algorithm without explanation and expect students to work blindly through derivations.  We find this approach to be unsatisfying, and instead choose to tackle the theory head-on, followed by plenty of examples.  Following [neal1998:em], we view expectation-maximization as coordinate ascent on the &lt;strong&gt;Evidence Lower Bound&lt;/strong&gt;.  This perspective takes much of the mystery out of the algorithm and allows us to easily derive variants like &lt;strong&gt;Hard EM&lt;/strong&gt; and &lt;strong&gt;Variational EM&lt;/strong&gt;.&lt;/p&gt;
-&lt;p&gt;&lt;em&gt;Note:  I actually wrote these notes for myself when learning about expectation maximization for the first time.  Accordingly, they have only been lightly proofread, and some parts are incomplete.  Contact me if you spot any big mistakes!&lt;/em&gt;&lt;/p&gt;
-&lt;h2&gt;Problem Setting&lt;/h2&gt;
-&lt;p&gt;Suppose we observe data &lt;span class="math"&gt;\(\X\)&lt;/span&gt; generated from a model &lt;span class="math"&gt;\(p\)&lt;/span&gt; with true parameters &lt;span class="math"&gt;\(\theta^\*\)&lt;/span&gt; in the presence of hidden variables &lt;span class="math"&gt;\(Z\)&lt;/span&gt;.  As usual, we wish to compute the maximum likelihood estimate
+&lt;h1&gt;Problem Setting&lt;/h1&gt;
+&lt;p&gt;Suppose we observe data &lt;span class="math"&gt;\(\X\)&lt;/span&gt; generated from a model &lt;span class="math"&gt;\(p\)&lt;/span&gt; with true parameters &lt;span class="math"&gt;\(\theta^*\)&lt;/span&gt; in the presence of hidden variables &lt;span class="math"&gt;\(Z\)&lt;/span&gt;.  As usual, we wish to compute the maximum likelihood estimate
     &lt;/p&gt;
 &lt;div class="math"&gt;$$
     \hat\theta_{ML}
     = \arg\max_\theta \ell(\theta|\X)
     = \arg\max_\theta \log p(\X | \theta)
     $$&lt;/div&gt;
-&lt;p&gt;of the parameters given our observed data.  In some cases, we also seek to &lt;em&gt;infer&lt;/em&gt; the values &lt;span class="math"&gt;\(\mathcal{Z}\)&lt;/span&gt; of the hidden variables &lt;span class="math"&gt;\(Z\)&lt;/span&gt;.  In the Bayesian spirit, we will treat the parameter &lt;span class="math"&gt;\(\theta^\*\)&lt;/span&gt; as a realization of some random variable &lt;span class="math"&gt;\(\Theta\)&lt;/span&gt;.&lt;/p&gt;
+&lt;p&gt;of the parameters given our observed data.  In some cases, we also seek to &lt;em&gt;infer&lt;/em&gt; the values &lt;span class="math"&gt;\(\mathcal{Z}\)&lt;/span&gt; of the hidden variables &lt;span class="math"&gt;\(Z\)&lt;/span&gt;.  In the Bayesian spirit, we will treat the parameter &lt;span class="math"&gt;\(\theta^*\)&lt;/span&gt; as a realization of some random variable &lt;span class="math"&gt;\(\Theta\)&lt;/span&gt;.&lt;/p&gt;
 &lt;p&gt;The observed data log-likelihood &lt;span class="math"&gt;\(\ell(\theta|\X) = \log p(\X | \theta)\)&lt;/span&gt; of the parameters given the observed data is useful for both inference and parameter estimation, in which we must grapple with uncertainty about the hidden variables.  Working directly with this quantity is often difficult in latent variable models because the inner sum cannot be brought out of the logarithm when we marginalize over the latent variables:
     &lt;/p&gt;
 &lt;div class="math"&gt;$$
@@ -24,7 +171,7 @@ $\newcommand{\X}{\mathcal{X}}$
     $$&lt;/div&gt;
 &lt;p&gt;
 In general, this likelihood is non-convex with many local maxima.  In contrast, [murphy:mlapp] shows that when &lt;span class="math"&gt;\(p(x_n, z_n | \theta)\)&lt;/span&gt; are exponential family distributions, the likelihood is convex, so learning is much easier.  Expectation maximization exploits the fact that learning is easy when we observe all variables.  We will alternate between inferring the values of the latent variables and re-estimating the parameters, assuming we have complete data.&lt;/p&gt;
-&lt;h2&gt;Evidence Lower Bound&lt;/h2&gt;
+&lt;h1&gt;Evidence Lower Bound&lt;/h1&gt;
 &lt;p&gt;Our general approach will be to reason about the hidden variables through a proxy distribution &lt;span class="math"&gt;\(q\)&lt;/span&gt;, which we use to compute a lower-bound on the log-likelihood.  This section is devoted to deriving one such bound, called the &lt;strong&gt;Evidence Lower Bound (ELBO)&lt;/strong&gt;.&lt;/p&gt;
 &lt;p&gt;We can expand the data log-likelihood by marginalizing over the hidden variables:
     &lt;/p&gt;
@@ -33,18 +180,18 @@ In general, this likelihood is non-convex with many local maxima.  In contrast, 
     = \log p(\X|\theta)
     = \log \sum_z p(\X, z | \theta)
     $$&lt;/div&gt;
-&lt;p&gt;Through Jensen's inequality, we obtain the following bound:
+&lt;p&gt;Through Jensen's inequality, we obtain the following bound, valid for any &lt;span class="math"&gt;\(q\)&lt;/span&gt;:
     &lt;/p&gt;
-&lt;div class="math"&gt;$$\begin{align}
+&lt;div class="math"&gt;$$\begin{aligned}
     \ell(\theta|\X)
     &amp;amp;=    \log \sum_z p(\X, z | \theta) \\
     &amp;amp;=    \log \sum_z q(z) \frac{p(\X, z | \theta)}{q(z)} \\
     &amp;amp;\geq \sum_z q(z) \log \frac{p(\X, z | \theta)}{q(z)}
     \equiv \mathcal{L}(q,\theta)
-    \end{align}$$&lt;/div&gt;
+    \end{aligned}$$&lt;/div&gt;
 &lt;p&gt;The lower bound &lt;span class="math"&gt;\(\mathcal{L}(q,\theta)\)&lt;/span&gt; can be rewritten as follows:
     &lt;/p&gt;
-&lt;div class="math"&gt;$$\begin{align}
+&lt;div class="math"&gt;$$\begin{aligned}
     \ell(\theta|\X)
     \geq \mathcal{L}(q,\theta)
     &amp;amp;= \sum_z q(z) \log \frac{p(\X, z | \theta)}{q(z)} \\
@@ -54,18 +201,18 @@ In general, this likelihood is non-convex with many local maxima.  In contrast, 
       -E_q[ \log q(z) ] \\
     &amp;amp;= E_q[ \log p(\X, Z | \theta)]
       + H(q)
-    \end{align}$$&lt;/div&gt;
-&lt;h3&gt;Relationship to Relative Entropy&lt;/h3&gt;
-&lt;p&gt;The first term in the last line above closely resembles the cross entropy between &lt;span class="math"&gt;\(q(Z)\)&lt;/span&gt; and the joint distribution &lt;span class="math"&gt;\(p(X, Z)\)&lt;/span&gt; of the observed and hidden variables.  However, the variables &lt;span class="math"&gt;\(X\)&lt;/span&gt; are fixed to our observations &lt;span class="math"&gt;\(X=\X\)&lt;/span&gt; and so &lt;span class="math"&gt;\(p(\X,Z)\)&lt;/span&gt; is an &lt;em&gt;unnormalized&lt;/em&gt;\footnote{In this case, &lt;span class="math"&gt;\(\int p(\X, z)\, dz \neq 1\)&lt;/span&gt;.} distribution over &lt;span class="math"&gt;\(Z\)&lt;/span&gt;.  It is easy to see that this does not set us back too far; in fact, the lower bound &lt;span class="math"&gt;\(\mathcal{L}(q,\theta)\)&lt;/span&gt; differs from a Kullback-Liebler divergence only by a constant with respect to &lt;span class="math"&gt;\(Z\)&lt;/span&gt;:
+    \end{aligned}$$&lt;/div&gt;
+&lt;h2&gt;Relationship to Relative Entropy&lt;/h2&gt;
+&lt;p&gt;The first term in the last line above closely resembles the cross entropy between &lt;span class="math"&gt;\(q(Z)\)&lt;/span&gt; and the joint distribution &lt;span class="math"&gt;\(p(X, Z)\)&lt;/span&gt; of the observed and hidden variables.  However, the variables &lt;span class="math"&gt;\(X\)&lt;/span&gt; are fixed to our observations &lt;span class="math"&gt;\(X=\X\)&lt;/span&gt; and so &lt;span class="math"&gt;\(p(\X,Z)\)&lt;/span&gt; is an &lt;em&gt;unnormalized&lt;/em&gt; [ref]In this case, &lt;span class="math"&gt;\(\int p(\X, z)\, dz \neq 1\)&lt;/span&gt;.[/ref] distribution over &lt;span class="math"&gt;\(Z\)&lt;/span&gt;.  It is easy to see that this does not set us back too far; in fact, the lower bound &lt;span class="math"&gt;\(\mathcal{L}(q,\theta)\)&lt;/span&gt; differs from a Kullback-Liebler divergence only by a constant with respect to &lt;span class="math"&gt;\(Z\)&lt;/span&gt;:
     &lt;/p&gt;
-&lt;div class="math"&gt;$$\begin{align}
+&lt;div class="math"&gt;$$\begin{aligned}
     D_{KL}(q || p(Z|\X,\theta))
     &amp;amp;= H(q, p(Z|\X,\theta)) - H(q) \\
     &amp;amp;= E_q[ -\log p(Z|\X,\theta) ] - H(q) \\
     &amp;amp;= E_q[ -\log p(\X,Z | \theta) ] - E_q[ -\log p(\X|\theta) ] - H(q) \\
     &amp;amp;= E_q[ -\log p(\X,Z | \theta) ] + \log p(\X|\theta) - H(q) \\
     &amp;amp;= -\mathcal{L}(q,\theta) + \mathrm{const.}
-    \end{align}$$&lt;/div&gt;
+    \end{aligned}$$&lt;/div&gt;
 &lt;p&gt;This yields a second proof of the evidence lower bound, following from the nonnegativity of relative entropy.  In fact, this is the proof given in [tzikas2008:variational] and [murphy:mlapp].
     &lt;/p&gt;
 &lt;div class="math"&gt;$$
@@ -73,7 +220,7 @@ In general, this likelihood is non-convex with many local maxima.  In contrast, 
     = D_{KL}(q || p(Z|\X, \theta)) + \mathcal{L}(q,\theta)
     \geq \mathcal{L}(q,\theta)
     $$&lt;/div&gt;
-&lt;h3&gt;Selecting a Proxy Distribution&lt;/h3&gt;
+&lt;h2&gt;Selecting a Proxy Distribution&lt;/h2&gt;
 &lt;p&gt;The quality of our lower bound &lt;span class="math"&gt;\(\mathcal{L}(q,\theta)\)&lt;/span&gt; depends heavily on the choice of proxy distribution &lt;span class="math"&gt;\(q(Z)\)&lt;/span&gt;.  We now show that the evidence lower bound is &lt;em&gt;tight&lt;/em&gt; in the sense that equality holds when the proxy distribution &lt;span class="math"&gt;\(q(Z)\)&lt;/span&gt; is chosen to be the hidden posterior &lt;span class="math"&gt;\(p(Z|\X,\theta)\)&lt;/span&gt;.  This will be useful later for proving that the Expectation Maximization algorithm converges.&lt;/p&gt;
 &lt;div class="post-remark"&gt;
 Maximizing $\mathcal{L}(q,\theta)$ with respect to $q$ is equivalent to minimizing the relative entropy between $q$ and the hidden posterior $p(Z|\X,\theta)$.  Hence, the optimal choice for $q$ is exactly the hidden posterior, for which $D_{KL}(q || p(Z|\X,\theta)) = 0$, and
@@ -82,7 +229,8 @@ Maximizing $\mathcal{L}(q,\theta)$ with respect to $q$ is equivalent to minimizi
     $$
 &lt;/div&gt;
 
-&lt;h2&gt;Expectation Maximization&lt;/h2&gt;
+&lt;p&gt;In cases where the hidden posterior is intractable to compute, we choo&lt;/p&gt;
+&lt;h1&gt;Expectation Maximization&lt;/h1&gt;
 &lt;p&gt;Recall that the maximum likelihood estimate of the parameters &lt;span class="math"&gt;\(\theta\)&lt;/span&gt; given observed data &lt;span class="math"&gt;\(\X\)&lt;/span&gt; in the presence of hidden variables &lt;span class="math"&gt;\(Z\)&lt;/span&gt; is
     &lt;/p&gt;
 &lt;div class="math"&gt;$$
@@ -96,7 +244,7 @@ Maximizing $\mathcal{L}(q,\theta)$ with respect to $q$ is equivalent to minimizi
     \ell(\theta|\X) \geq \mathcal{L}(q,\theta)
     $$&lt;/div&gt;
 &lt;p&gt;on the data likelihood.  Consider only proxy distributions of the form &lt;span class="math"&gt;\(q_\vartheta(Z) = p(Z|\X,\vartheta)\)&lt;/span&gt;, where &lt;span class="math"&gt;\(\vartheta\)&lt;/span&gt; is some fixed configuration of the variables &lt;span class="math"&gt;\(\Theta\)&lt;/span&gt;, possibly different from our estimate &lt;span class="math"&gt;\(\theta\)&lt;/span&gt;.  The optimal value for &lt;span class="math"&gt;\(\vartheta\)&lt;/span&gt;, in the sense that &lt;span class="math"&gt;\(\mathcal{L}(q_\vartheta, \theta)\)&lt;/span&gt; is maximum, depends on the particular choice of &lt;span class="math"&gt;\(\theta\)&lt;/span&gt;.  Similarly, the optimal value for &lt;span class="math"&gt;\(\theta\)&lt;/span&gt; depends on the choice of &lt;span class="math"&gt;\(\vartheta\)&lt;/span&gt;.  This suggests an iterative scheme in which we alternate between maximizing with respect to &lt;span class="math"&gt;\(\vartheta\)&lt;/span&gt; and with respect to &lt;span class="math"&gt;\(\theta\)&lt;/span&gt;, gradually improving the log-likelihood.&lt;/p&gt;
-&lt;h3&gt;Iterative Procedure&lt;/h3&gt;
+&lt;h2&gt;Iterative Procedure&lt;/h2&gt;
 &lt;p&gt;Suppose at time &lt;span class="math"&gt;\(t\)&lt;/span&gt; we have an estimate &lt;span class="math"&gt;\(\theta_t\)&lt;/span&gt; of the parameters.  To improve our estimate, we perform two steps of coordinate ascent on &lt;span class="math"&gt;\(\L(\vartheta, \theta) \equiv \L(q_\vartheta, \theta)\)&lt;/span&gt;, as described in [neal1998:em],&lt;/p&gt;
 &lt;div class="post-framed"&gt;
     &lt;h3&gt;E-Step&lt;/h3&gt;
@@ -117,43 +265,40 @@ Maximizing $\mathcal{L}(q,\theta)$ with respect to $q$ is equivalent to minimizi
 &lt;/div&gt;
 
 &lt;p&gt;In the M-Step, the expectation is taken with respect to &lt;span class="math"&gt;\(q_{\vartheta_{t+1}}\)&lt;/span&gt;.&lt;/p&gt;
-&lt;h4&gt;Alternate Formulation&lt;/h4&gt;
+&lt;h3&gt;Alternate Formulation&lt;/h3&gt;
 &lt;p&gt;In the M-Step, the entropy term of the evidence lower bound &lt;span class="math"&gt;\(\mathcal{L}(\vartheta_{t+1}, \theta)\)&lt;/span&gt; does not depend on &lt;span class="math"&gt;\(\theta\)&lt;/span&gt;.  The remaining term &lt;span class="math"&gt;\(Q(\theta_t, \theta)=E_q[\log p(\X,Z|\theta)]\)&lt;/span&gt; is sometimes called the &lt;strong&gt;auxiliary function&lt;/strong&gt; or &lt;strong&gt;Q-function&lt;/strong&gt;.  To us, this is the &lt;strong&gt;expected complete-data log-likelihood&lt;/strong&gt;.&lt;/p&gt;
-&lt;h3&gt;Proof of Convergence&lt;/h3&gt;
+&lt;h2&gt;Proof of Convergence&lt;/h2&gt;
 &lt;p&gt;To prove convergence of this algorithm, we show that the data likelihood &lt;span class="math"&gt;\(\ell(\theta|\X)\)&lt;/span&gt; increases after each update.&lt;/p&gt;
-&lt;p&gt;%% Data Likelihood Increases with each Update
-&lt;/p&gt;
-&lt;div class="math"&gt;\begin{theorem}
-After a single iteration of Expectation Maximization, the observed data likelihood of the estimated parameters has not decreased, that is,
-    \begin{equation*}
+&lt;!-- Theorem:  Data likelihood increases with each update --&gt;
+
+&lt;div class="theorem"&gt;
+&lt;span class="label"&gt;Theorem.&lt;/span&gt; After a single iteration of Expectation Maximization, the observed data likelihood of the estimated parameters has not decreased, that is,
+    $$
     \ell(\theta_t | \X) \leq \ell(\theta_{t+1} | \X)
-    \end{equation*}
-\end{theorem}&lt;/div&gt;
-&lt;p&gt;
-%
-&lt;/p&gt;
-&lt;div class="math"&gt;\begin{proof}
-This result is a simple consequence of all the hard work we have put in so far:
-\begin{align*}
+    $$
+&lt;/div&gt;
+
+&lt;p&gt;This result is a simple consequence of all the hard work we have put in so far:&lt;/p&gt;
+&lt;div class="math"&gt;$$\begin{aligned}
 \ell(\theta_t | \X)
 &amp;amp;= \mathcal{L}(q_{\vartheta_{t+1}}, \theta_t)           
-    &amp;amp; \text{(\autoref{rmk:elbo-tightness})} \\
+    &amp;amp; \text{(tightness)} \\
 &amp;amp;\leq \mathcal{L}(q_{\vartheta_{t+1}}, \theta_{t+1})  
     &amp;amp; \text{(M-Step)} \\
 &amp;amp;\leq \ell(\theta_{t+1} | \X)                         
     &amp;amp; \text{(ELBO)}
-\end{align*}
-\end{proof}&lt;/div&gt;
+\end{aligned}$$&lt;/div&gt;
 &lt;p&gt;It is also possible to show that Expectation-Maximization converges to something &lt;em&gt;useful&lt;/em&gt;.  &lt;/p&gt;
-&lt;p&gt;%% Local Maximum of ELBO is Local Maximum of Likelihood
-&lt;/p&gt;
-&lt;div class="math"&gt;\begin{theorem} (Neal \&amp;amp; Hinton 1998, Thm. 2)
-Every local maximum of the evidence lower bound $\mathcal{L}(q, \theta)$ is a local maximum of the data likelihood $\ell(\theta | \X)$.
-\end{theorem}&lt;/div&gt;
-&lt;p&gt;Starting from an initial guess &lt;span class="math"&gt;\(\theta_0\)&lt;/span&gt;, We run this procedure until some stopping criterion is met and obtain a sequence &lt;span class="math"&gt;\(\set{ (\vartheta_t, \theta_t) }_{t=1}^T\)&lt;/span&gt; of parameter estimates.&lt;/p&gt;
-&lt;h2&gt;Example: Coin Flips&lt;/h2&gt;
+&lt;!-- Theorem: Local Maximum of ELBO is Local Maximum of Likelihood --&gt;
+
+&lt;div class="theorem"&gt;
+&lt;span class="label"&gt;Theorem.&lt;/span&gt; (Neal \&amp; Hinton 1998, Thm. 2) Every local maximum of the evidence lower bound $\mathcal{L}(q, \theta)$ is a local maximum of the data likelihood $\ell(\theta | \X)$.
+&lt;/div&gt;
+
+&lt;p&gt;Starting from an initial guess &lt;span class="math"&gt;\(\theta_0\)&lt;/span&gt;, We run this procedure until some stopping criterion is met and obtain a sequence &lt;span class="math"&gt;\(\{ (\vartheta_t, \theta_t) \}_{t=1}^T\)&lt;/span&gt; of parameter estimates.&lt;/p&gt;
+&lt;h1&gt;Example: Coin Flips&lt;/h1&gt;
 &lt;p&gt;Now that we have a good grasp on the theory behind Expectation Maximization, let's get some intuition by means of a simple example.  As usual, the simplest possible example involves coin flips!&lt;/p&gt;
-&lt;h3&gt;Probabilistic Model&lt;/h3&gt;
+&lt;h2&gt;Probabilistic Model&lt;/h2&gt;
 &lt;p&gt;Suppose we have two coins, each with a different probability of heads, &lt;span class="math"&gt;\(\theta_A\)&lt;/span&gt; and &lt;span class="math"&gt;\(\theta_B\)&lt;/span&gt;, unknown to us.  We collect data from a series of &lt;span class="math"&gt;\(N\)&lt;/span&gt; trials in order to estimate the bias of each coin.  Each trial &lt;span class="math"&gt;\(k\)&lt;/span&gt; consists of flipping the same random coin &lt;span class="math"&gt;\(Z_k\)&lt;/span&gt; a total of &lt;span class="math"&gt;\(M\)&lt;/span&gt; times and recording only the total number &lt;span class="math"&gt;\(X_k\)&lt;/span&gt; of heads.  &lt;/p&gt;
 &lt;p&gt;This situation is best described by the following &lt;strong&gt;generative probabilistic model&lt;/strong&gt;, which precisely describes our assumptions about how the data was generated.  The corresponding graphical model and a set of sample data are shown in Figure \ref{fig:coinflip-pgm-data}.\
     &lt;/p&gt;
@@ -161,13 +306,13 @@ Every local maximum of the evidence lower bound $\mathcal{L}(q, \theta)$ is a lo
     \begin{aligned}
     \theta &amp;amp;= (\theta_A, \theta_B)  &amp;amp;                       
         &amp;amp;&amp;amp;\text{fixed coin biases} \\
-    Z_n &amp;amp;\sim \Uniform\set{A, B}    &amp;amp; \forall\, n=1,\dots,N
+    Z_n &amp;amp;\sim \mathrm{Uniform}\{A, B\}    &amp;amp; \forall\, n=1,\dots,N
         &amp;amp;&amp;amp;\text{coin indicators} \\
-    X_n | Z_n, \theta &amp;amp;\sim \Bin[\theta_{Z_n}, M] &amp;amp; \forall\, n=1,\dots,N
+    X_n | Z_n, \theta &amp;amp;\sim \mathrm{Bin}[\theta_{Z_n}, M] &amp;amp; \forall\, n=1,\dots,N
         &amp;amp;&amp;amp;\text{head count}
     \end{aligned}
     $$&lt;/div&gt;
-&lt;h3&gt;Complete Data Log-Likelihood&lt;/h3&gt;
+&lt;h2&gt;Complete Data Log-Likelihood&lt;/h2&gt;
 &lt;p&gt;The complete data log-likelihood for a single trial &lt;span class="math"&gt;\((x_n, z_n)\)&lt;/span&gt; is
     &lt;/p&gt;
 &lt;div class="math"&gt;$$
@@ -176,26 +321,26 @@ Every local maximum of the evidence lower bound $\mathcal{L}(q, \theta)$ is a lo
 &lt;p&gt;
 In this model, &lt;span class="math"&gt;\(P(z_n) = \frac{1}{2}\)&lt;/span&gt; is uniform.  The remaining term is
     &lt;/p&gt;
-&lt;div class="math"&gt;$$\begin{align}
+&lt;div class="math"&gt;$$\begin{aligned}
     \log p(x_n | z_n, \theta)
     &amp;amp;= \log \binom{M}{x_n} \theta_{z_n}^{x_n} (1-\theta_{z_n})^{M-x_n} \\
     &amp;amp;= \log \binom{M}{x_n} + x_n \log\theta_{z_n} + (M-x_n)\log(1-\theta_{z_n})
-    \end{align}$$&lt;/div&gt;
-&lt;h3&gt;Expectation Maximization}&lt;/h3&gt;
+    \end{aligned}$$&lt;/div&gt;
+&lt;h2&gt;Expectation Maximization&lt;/h2&gt;
 &lt;p&gt;Now that we have specified the probabilistic model and worked out all relevant probabilities, we are ready to derive an Expectation Maximization algorithm.&lt;/p&gt;
 &lt;p&gt;The &lt;strong&gt;E-Step&lt;/strong&gt; is straightforward.  The &lt;strong&gt;M-Step&lt;/strong&gt; computes a new parameter estimate &lt;span class="math"&gt;\(\theta_{t+1}\)&lt;/span&gt; by optimizing over the lower bound found in the E-Step.  Let &lt;span class="math"&gt;\(\vartheta = \vartheta_{t+1} = \theta_t\)&lt;/span&gt;.  Then,
     &lt;/p&gt;
-&lt;div class="math"&gt;$$\begin{align}
+&lt;div class="math"&gt;$$\begin{aligned}
     \theta_{t+1}
     = \arg\max_\theta \L(\theta, q_\vartheta)
     &amp;amp;= \arg\max_\theta E_q[\log p(\X, Z | \theta )]                  \\
     &amp;amp;= \arg\max_\theta E_q[\log p(\X | Z, \theta) p(Z)]              \\
     &amp;amp;= \arg\max_\theta E_q[\log p(\X | Z, \theta)] + \log p(Z)        \\
     &amp;amp;= \arg\max_\theta E_q[\log p(\X | Z, \theta)]
-    \end{align}$$&lt;/div&gt;
+    \end{aligned}$$&lt;/div&gt;
 &lt;p&gt;Now, because each trial is conditionally independent of the others, given the parameters,
     &lt;/p&gt;
-&lt;div class="math"&gt;$$\begin{align}
+&lt;div class="math"&gt;$$\begin{aligned}
     E_q[\log p(\X | Z, \theta)]                      
     &amp;amp;= E_q\left[ \log \prod_{n=1}^N p(x_n | Z_n, \theta) \right]     
      = \sum_{n=1}^N E_q[\log p(x_n | Z_n , \theta)]
@@ -213,10 +358,10 @@ In this model, &lt;span class="math"&gt;\(P(z_n) = \frac{1}{2}\)&lt;/span&gt; is
     &amp;amp;+ \sum_{n=1}^N q_\vartheta(z_n=B)
         \bigg[ x_n \log \theta_B + (M-x_n) \log \theta_B \bigg]
      + \text{const. w.r.t. } \theta
-    \end{align}$$&lt;/div&gt;
+    \end{aligned}$$&lt;/div&gt;
 &lt;p&gt;Let &lt;span class="math"&gt;\(a_k = q(z_k = A)\)&lt;/span&gt; and &lt;span class="math"&gt;\(b_k = q(z_k = B)\)&lt;/span&gt;.  Note &lt;span class="math"&gt;\(\sum_{k=1}^N a_k = \sum_{k=1}^N b_k = 1\)&lt;/span&gt;.  To maximize the above expression with respect to the parameters, we take derivatives with respect to &lt;span class="math"&gt;\(\theta_A\)&lt;/span&gt; and &lt;span class="math"&gt;\(\theta_B\)&lt;/span&gt; and set to zero:
     &lt;/p&gt;
-&lt;div class="math"&gt;$$\begin{align}
+&lt;div class="math"&gt;$$\begin{aligned}
     \frac{\partial}{\partial \theta_A} \bigg[ E_q[\log p(\X | Z, \theta)] \bigg]
     &amp;amp;= \frac{1}{\theta_A} \sum_{n=1}^N a_n x_n
      + \frac{1}{1-\theta_A} \sum_{n=1}^N a_n (M-x_n) = 0 \\
@@ -224,7 +369,7 @@ In this model, &lt;span class="math"&gt;\(P(z_n) = \frac{1}{2}\)&lt;/span&gt; is
     \frac{\partial}{\partial \theta_B} \bigg[ E_q[\log p(\X | Z, \theta)] \bigg]
     &amp;amp;= \frac{1}{\theta_B} \sum_{n=1}^N b_n x_n
      + \frac{1}{1-\theta_B} \sum_{n=1}^N b_n (M-x_n) = 0 \\
-    \end{align}$$&lt;/div&gt;
+    \end{aligned}$$&lt;/div&gt;
 &lt;p&gt;Solving for &lt;span class="math"&gt;\(\theta_A\)&lt;/span&gt; and &lt;span class="math"&gt;\(\theta_B\)&lt;/span&gt;, we obtain
     &lt;/p&gt;
 &lt;div class="math"&gt;$$
@@ -232,8 +377,8 @@ In this model, &lt;span class="math"&gt;\(P(z_n) = \frac{1}{2}\)&lt;/span&gt; is
     \qquad
     \theta_B = \frac{\sum_{n=1}^N b_n x_n}{\sum_{n=1}^N b_n M}
     $$&lt;/div&gt;
-&lt;h2&gt;Example:  Gaussian Mixture Model&lt;/h2&gt;
-&lt;h3&gt;Probabilistic Model&lt;/h3&gt;
+&lt;h1&gt;Example:  Gaussian Mixture Model&lt;/h1&gt;
+&lt;h2&gt;Probabilistic Model&lt;/h2&gt;
 &lt;p&gt;In a Gaussian Mixture Model, samples are drawn from a random &lt;em&gt;cluster&lt;/em&gt;, each normally distributed with its own mean and variance.  Our goal will be to estimate the following parameters:
     &lt;/p&gt;
 &lt;div class="math"&gt;$$
@@ -249,37 +394,37 @@ The full model specification is below.  A graphical model is shown in Figure \re
 &lt;div class="math"&gt;$$
     \begin{aligned}
     \theta &amp;amp;= (\vec\pi, \vec\mu, \vec\Sigma) &amp;amp;&amp;amp; \text{model parameters} \\
-    z_n &amp;amp;\sim \Cat[\pi]  &amp;amp;&amp;amp; \text{cluster indicators} \\
+    z_n &amp;amp;\sim \mathrm{Cat}[\pi]  &amp;amp;&amp;amp; \text{cluster indicators} \\
     x_n | z_n, \theta &amp;amp;\sim \mathcal{N}(\mu_{z_n}, \Sigma_{z_n}) &amp;amp;&amp;amp; \text{base distribution}
     \end{aligned}
     $$&lt;/div&gt;
-&lt;h4&gt;Complete Data Log-Likelihood&lt;/h4&gt;
+&lt;h3&gt;Complete Data Log-Likelihood&lt;/h3&gt;
 &lt;p&gt;The complete data log-likelihood for a single datapoint &lt;span class="math"&gt;\((x_n, z_n)\)&lt;/span&gt; is
     &lt;/p&gt;
-&lt;div class="math"&gt;$$\begin{align}
+&lt;div class="math"&gt;$$\begin{aligned}
     \log p(x_n, z_n | \theta)
     &amp;amp;= \log \prod_{k=1}^K \pi_k \mathcal{N}(x_n \mid \mu_k, \Sigma_k)^{\mathbb{I}(z_n = k)} \\
     &amp;amp;= \sum_{k=1}^K \mathbb{I}(z_n = k) \log \pi_k \mathcal{N}(x_n \mid \mu_k, \Sigma_k)
-    \end{align}$$&lt;/div&gt;
+    \end{aligned}$$&lt;/div&gt;
 &lt;p&gt;
 Similarly, the complete data log-likelihood over all points &lt;span class="math"&gt;\(\{ (x_n, z_n) \}_{n=1}^N\)&lt;/span&gt; is
     &lt;/p&gt;
-&lt;div class="math"&gt;$$\label{gmm:complete-log-likelihood}
+&lt;div class="math"&gt;$$
     \log p(X,Z | \theta)
     = \sum_{n=1}^N \log p(x_n, z_n | \theta)
     = \sum_{n=1}^N \sum_{k=1}^K \mathbb{I}(z_n = k) \log \pi_k \mathcal{N}(x_n \mid \mu_k, \Sigma_k)
     $$&lt;/div&gt;
-&lt;h4&gt;Hidden Posterior&lt;/h4&gt;
+&lt;h3&gt;Hidden Posterior&lt;/h3&gt;
 &lt;p&gt;The hidden posterior for a single point &lt;span class="math"&gt;\((x_n, z_n)\)&lt;/span&gt; can be found using Bayes' rule:
     &lt;/p&gt;
-&lt;div class="math"&gt;$$\begin{align}
+&lt;div class="math"&gt;$$\begin{aligned}
     p(z_n = k | x_n, \theta)
     &amp;amp;= \frac{P(z_n=k | \theta) p(x_n | z_n=k, \theta)}{p(x_N | \theta)} \\
-    &amp;amp;= \frac{\pi_k \mathcal{N}(x_n | \mu_k, \Sigma_k)}{\sum_{k'=1}^K \pi_{k'} \mathcal{N}(x_n | \mu_{k'}, \Sigma_{k'})} \label{gmm:hidden-posterior}
-    \end{align}$$&lt;/div&gt;
-&lt;h3&gt;Expectation Maximization&lt;/h3&gt;
+    &amp;amp;= \frac{\pi_k \mathcal{N}(x_n | \mu_k, \Sigma_k)}{\sum_{k'=1}^K \pi_{k'} \mathcal{N}(x_n | \mu_{k'}, \Sigma_{k'})}
+    \end{aligned}$$&lt;/div&gt;
+&lt;h2&gt;Expectation Maximization&lt;/h2&gt;
 &lt;p&gt;Our derivation will follow that of [murphy:mlapp], adapted to our notation.&lt;/p&gt;
-&lt;h4&gt;E-Step&lt;/h4&gt;
+&lt;h3&gt;E-Step&lt;/h3&gt;
 &lt;p&gt;Before the E-step, we have an estimate &lt;span class="math"&gt;\(\theta_t\)&lt;/span&gt; of the parameters, and seek to compute a new lower bound on the observed log-likelihood.  Earlier, we showed that the optimal lower bound is
     &lt;/p&gt;
 &lt;div class="math"&gt;$$
@@ -288,7 +433,7 @@ Similarly, the complete data log-likelihood over all points &lt;span class="math
 &lt;p&gt;
 where &lt;span class="math"&gt;\(q_{\theta_t}(z) \equiv p(z|\X,\theta_t)\)&lt;/span&gt; and the second term is constant with respect to &lt;span class="math"&gt;\(\theta\)&lt;/span&gt;.  The E-Step requires us to derive an expression for the first term.  Using \autoref{gmm:complete-log-likelihood}, the expected complete data log-likelihood is given by
     &lt;/p&gt;
-&lt;div class="math"&gt;$$\begin{align}
+&lt;div class="math"&gt;$$\begin{aligned}
     Q(\theta_t, \theta) = E_q[ \log p(\X,Z|\theta)]
     &amp;amp;= \sum_{n=1}^N \sum_{k=1}^K
             E_q\big[ \mathbb{I}(z_n = k) \log \pi_k \mathcal{N}(x_n \mid \mu_k, \Sigma_k) \big] \\
@@ -302,10 +447,10 @@ where &lt;span class="math"&gt;\(q_{\theta_t}(z) \equiv p(z|\X,\theta_t)\)&lt;/s
             r_{nk} \log \pi_k
      + \sum_{n=1}^N \sum_{k=1}^K
             r_{nk} \log \mathcal{N}(x_n \mid \mu_k, \Sigma_k)
-    \end{align}$$&lt;/div&gt;
+    \end{aligned}$$&lt;/div&gt;
 &lt;p&gt;
 where &lt;span class="math"&gt;\(r_{nk} \equiv p(z_n = k \mid x_n, \theta_t)\)&lt;/span&gt; is the &lt;strong&gt;responsibility&lt;/strong&gt; that cluster &lt;span class="math"&gt;\(k\)&lt;/span&gt; takes for data point &lt;span class="math"&gt;\(x_n\)&lt;/span&gt; after step &lt;span class="math"&gt;\(t\)&lt;/span&gt;.  During the E-Step, we compute these values explicitly with \autoref{gmm:hidden-posterior}.&lt;/p&gt;
-&lt;h4&gt;M-Step&lt;/h4&gt;
+&lt;h3&gt;M-Step&lt;/h3&gt;
 &lt;p&gt;During the M-Step, we optimize our lower bound with respect to the parameters &lt;span class="math"&gt;\(\theta = (\vec\pi, \vec\mu, \vec\Sigma)\)&lt;/span&gt;.  For the mixing weights &lt;span class="math"&gt;\(\vec\pi\)&lt;/span&gt;, we use Lagrange multipliers to maximize the ELBO subject to the constraint &lt;span class="math"&gt;\(\sum_{k=1}^K \pi_k = 1\)&lt;/span&gt;.  The Lagrangian is
     &lt;/p&gt;
 &lt;div class="math"&gt;$$
@@ -325,7 +470,7 @@ where &lt;span class="math"&gt;\(r_k \equiv \sum_{n=1}^n r_{nk}\)&lt;/span&gt; i
     \qquad
     \boxed{ \Sigma_k = \frac{\sum_{n=1}^N r_{nk} x_n x_n^T}{r_k} - \mu_k \mu_k^T }
     $$&lt;/div&gt;
-&lt;h2&gt;Advice for Deriving EM Algorithms&lt;/h2&gt;
+&lt;h1&gt;Advice for Deriving EM Algorithms&lt;/h1&gt;
 &lt;p&gt;The previous two examples suggest a general approach for deriving a new algorithm.&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;&lt;strong&gt;Specify the probabilistic model.&lt;/strong&gt;  Identify the observed variables, hidden variables, and parameters.  Draw the corresponding graphical model to help determine the underlying independence structure.&lt;/li&gt;
@@ -333,69 +478,10 @@ where &lt;span class="math"&gt;\(r_k \equiv \sum_{n=1}^n r_{nk}\)&lt;/span&gt; i
 &lt;li&gt;&lt;strong&gt;Identify the hidden posterior &lt;span class="math"&gt;\(P(Z|X,\theta)\)&lt;/span&gt;.&lt;/strong&gt;  If this distribution is not tractable, you may want to consider variational inference, which we will discuss later.&lt;/li&gt;
 &lt;li&gt;&lt;strong&gt;Derive the E-Step.&lt;/strong&gt;  Write down an expression for &lt;span class="math"&gt;\(E_q[ \log p(\X | Z,\theta)]\)&lt;/span&gt;.&lt;/li&gt;
 &lt;li&gt;&lt;strong&gt;Derive the M-Step.&lt;/strong&gt;  Try taking derivatives and setting to zero.  If this doesn't work, you may need to resort to gradient-based methods or variational inference.&lt;/li&gt;
-&lt;/ul&gt;
-&lt;script type="text/javascript"&gt;if (!document.getElementById('mathjaxscript_pelican_#%@#$@#')) {
-    var align = "center",
-        indent = "0em",
-        linebreak = "false";
-
-    if (false) {
-        align = (screen.width &lt; 768) ? "left" : align;
-        indent = (screen.width &lt; 768) ? "0em" : indent;
-        linebreak = (screen.width &lt; 768) ? 'true' : linebreak;
-    }
-
-    var mathjaxscript = document.createElement('script');
-    var location_protocol = (false) ? 'https' : document.location.protocol;
-    if (location_protocol !== 'http' &amp;&amp; location_protocol !== 'https') location_protocol = 'https:';
-    mathjaxscript.id = 'mathjaxscript_pelican_#%@#$@#';
-    mathjaxscript.type = 'text/javascript';
-    mathjaxscript.src = location_protocol + '//cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML';
-    mathjaxscript[(window.opera ? "innerHTML" : "text")] =
-        "MathJax.Hub.Config({" +
-        "    config: ['MMLorHTML.js']," +
-        "    TeX: { extensions: ['AMSmath.js','AMSsymbols.js','noErrors.js','noUndefined.js'], equationNumbers: { autoNumber: 'AMS' } }," +
-        "    jax: ['input/TeX','input/MathML','output/HTML-CSS']," +
-        "    extensions: ['tex2jax.js','mml2jax.js','MathMenu.js','MathZoom.js']," +
-        "    displayAlign: '"+ align +"'," +
-        "    displayIndent: '"+ indent +"'," +
-        "    showMathMenu: true," +
-        "    messageStyle: 'normal'," +
-        "    tex2jax: { " +
-        "        inlineMath: [ ['\\\\(','\\\\)'] ], " +
-        "        displayMath: [ ['$$','$$'] ]," +
-        "        processEscapes: true," +
-        "        preview: 'TeX'," +
-        "    }, " +
-        "    'HTML-CSS': { " +
-        "        styles: { '.MathJax_Display, .MathJax .mo, .MathJax .mi, .MathJax .mn': {color: 'inherit ! important'} }," +
-        "        linebreaks: { automatic: "+ linebreak +", width: '90% container' }," +
-        "    }, " +
-        "}); " +
-        "if ('default' !== 'default') {" +
-            "MathJax.Hub.Register.StartupHook('HTML-CSS Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax['HTML-CSS'].FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-            "MathJax.Hub.Register.StartupHook('SVG Jax Ready',function () {" +
-                "var VARIANT = MathJax.OutputJax.SVG.FONTDATA.VARIANT;" +
-                "VARIANT['normal'].fonts.unshift('MathJax_default');" +
-                "VARIANT['bold'].fonts.unshift('MathJax_default-bold');" +
-                "VARIANT['italic'].fonts.unshift('MathJax_default-italic');" +
-                "VARIANT['-tex-mathit'].fonts.unshift('MathJax_default-italic');" +
-            "});" +
-        "}";
-    (document.body || document.getElementsByTagName('head')[0]).appendChild(mathjaxscript);
-}
-&lt;/script&gt;</summary></entry><entry><title>Incompressible Fluid Simulation</title><link href="http://benrbray.com/posts/2015/Aug/21/incompressible-fluid-simulation" rel="alternate"></link><published>2015-08-21T00:00:00-04:00</published><updated>2015-08-21T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2015-08-21:posts/2015/Aug/21/incompressible-fluid-simulation</id><summary type="html">&lt;p&gt;Simulation of two-dimensional incompressible flow with periodic boundary conditions, achieved by solving the Euler Equations in the frequency domain via the Fast Fourier Transform (FFT).  Written in Java.&lt;/p&gt;
-&lt;p&gt;&lt;img alt="Fluid Simulation" src="http://benrbray.com/images/fluid.png" /&gt;&lt;/p&gt;
+&lt;/ul&gt;</content></entry><entry><title>Incompressible Fluid Simulation</title><link href="http://benrbray.com/posts/2015/Aug/21/incompressible-fluid-simulation" rel="alternate"></link><published>2015-08-21T00:00:00-04:00</published><updated>2015-08-21T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2015-08-21:/posts/2015/Aug/21/incompressible-fluid-simulation</id><summary type="html">&lt;p&gt;Simulation of two-dimensional incompressible flow with periodic boundary conditions, achieved by solving the Euler Equations in the frequency domain via the Fast Fourier Transform (FFT).  Written in Java.&lt;/p&gt;</summary><content type="html">&lt;p&gt;Simulation of two-dimensional incompressible flow with periodic boundary conditions, achieved by solving the Euler Equations in the frequency domain via the Fast Fourier Transform (FFT).  Written in Java.&lt;/p&gt;
+&lt;p&gt;&lt;img alt="Fluid Simulation" src="http://benrbray.com/images/fluid.png"&gt;&lt;/p&gt;
 &lt;p&gt;Based on the following excellent resources:&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;Stam, Jos. Stable Fluids. SIGGRAPH 99, Los Angeles, CA.&lt;/li&gt;
 &lt;li&gt;Bridson, Robert, and Matthias Müller-Fischer. Fluid Simulation. SIGGRAPH 07. Course Notes.&lt;/li&gt;
-&lt;/ul&gt;</summary><category term="fluid-simulation"></category></entry><entry><title>Test Page</title><link href="http://benrbray.com/posts/2015/Aug/19/test-page" rel="alternate"></link><published>2015-08-19T10:04:00-04:00</published><updated>2015-08-19T10:04:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2015-08-19:posts/2015/Aug/19/test-page</id><summary type="html">&lt;p&gt;Lorem ipsum dolor sit amet, consectetur adipiscing elit. Vivamus gravida eros eu consectetur vulputate. Maecenas vestibulum ipsum et sapien dapibus, non maximus mauris finibus. Morbi velit sem, mollis in scelerisque et, consequat sed augue. Suspendisse augue mauris, ultrices in commodo nec, auctor tincidunt sem. Nullam tristique non odio sit amet porta. Phasellus ut elit ornare, tincidunt erat et, vulputate libero. Morbi sagittis efficitur lorem, eu efficitur elit finibus non. Maecenas massa ex, dapibus a ipsum ac, pharetra tempor nisi. Aenean dapibus tellus sed luctus tempor.&lt;/p&gt;
-&lt;p&gt;&lt;img alt="Penguin" src="http://benrbray.com/images/penguin.jpg" /&gt;&lt;/p&gt;
-&lt;p&gt;Sed congue, dolor a ultricies vehicula, enim eros scelerisque quam, nec facilisis metus orci porttitor mauris. Sed purus arcu, eleifend in augue nec, porta suscipit leo. Mauris nec ligula erat. Nulla ac ligula quis diam consequat eleifend. Vivamus mattis eros orci, quis posuere mi tempor eu. Quisque placerat, nisi at viverra malesuada, velit libero lacinia mauris, sit amet blandit nibh nulla non nisl. Curabitur vehicula sem id dolor vehicula, a dapibus urna rhoncus. Donec quis metus ut lectus dignissim pellentesque. Aliquam elementum ex vel elit ornare, nec interdum nibh semper. Vivamus sodales dui non massa cursus lacinia sit amet non quam. Vestibulum lacus neque, elementum vel ultrices nec, consectetur a justo. Donec luctus hendrerit dui, id vehicula lacus dignissim eu. Nulla vel urna nisl. Donec vehicula nunc at porttitor pellentesque.&lt;/p&gt;</summary></entry></feed>
+&lt;/ul&gt;</content><category term="fluid-simulation"></category></entry></feed>

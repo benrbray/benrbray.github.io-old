@@ -11,51 +11,128 @@ Tags: academic
 */
 
 :root {
-	--min-width: 700px;
-	--max-width: 800px;
+	/* Page Dimensions */
+	--min-width: 400px;
+	--max-width: 760px;
+	/* Header */
+	--header-height: 60px;
+	--title-size: 22px;
+	/* Fonts */
 	--serif-fonts:  'Droid Serif', serif;
-	--sans-fonts:  'Segoe UI', 'Ubuntu', sans-serif;
+	--sans-fonts:  'Roboto', 'Segoe UI', 'Ubuntu', sans-serif;
+	/*--sans-fonts: "Verdana", "Helvetica Neue", Helvetica, Arial, sans-serif;*/
 }
 
 body {
-	margin: 0 40px;
+	margin: 0;
 	font-family: var(--sans-fonts);
+	font-weight: 300;
 }
+
+/* Basic Styles ------------------------------------------------------------- */
+
+h1,h2,h3,h4,h5,h6 {
+	font-family: var(--serif-fonts);
+	font-weight: normal;
+}
+
+h1 {
+	margin: 40px 0 20px 0;
+	font-size: 24px;
+}
+
+h2 {
+	margin: 20px 0 10px 0;
+	font-size: 18px;
+}
+
+h4 {
+	font-weight: 400;
+	font-size: 16px;
+}
+
+.center {
+	margin: 0 auto;
+}
+
+p {
+	line-height: 1.4;
+	font-size: 16px;
+}
+
+em {
+	font-weight: 300;
+	font-style: italic;
+}
+
+b,strong {
+	font-weight: 400;
+	font-style: normal;
+}
+
+/* Links */
+
+a {
+	color: #2a7ae2;
+	font-weight: 400;
+	text-decoration: none;
+}
+
+/*a:visited {
+	color: #1756a9;
+}*/
+
+a:hover {
+	text-decoration: underline;
+}
+
+ul ul {
+	margin: 0;
+}
+
+/* Page Content ------------------------------------------------------------- */
 
 #page {
 	margin: 0 auto;
 	max-width: var(--max-width);
 	min-width: var(--min-width);
 }
-
-h1 {
-	margin: 0;
-	font-family: var(--serif-fonts);
-	font-weight: normal;
-	font-size: 28px;
+#content {
+	padding: 0 10px;
 }
 
-/* Header */
+
+/* Page Header -------------------------------------------------------------- */
+
+#header-box {
+	border-bottom: 1px solid #ccc;
+	margin-bottom: 30px;
+}
 
 #header {
 	display: flex;
-	align-items: baseline;
+	box-sizing: border-box;
+	/*align-items: baseline;*/
+	margin: 0 auto;
+	padding: 0 10px;
 	max-width: var(--max-width);
-	margin-top: 20px;
-	padding: 0 30px;
+	min-width: var(--min-width);
 }
 
 #header-name {
 	display: inline-block;
 	margin-right: 20px;
-	height: 80px;
+	height: var(--header-height);
+	line-height: var(--header-height);
 	
 	user-select: none;
-	cursor: default;
-	line-height: 80px;
+	cursor: pointer;
+	
+	color: inherit;
 	vertical-align: middle;
 	font-family: var(--serif-fonts);
-	font-size:  36px;
+	font-size:  28px;
+	text-decoration: none;
 }
 
 #header-nav {
@@ -72,10 +149,18 @@ h1 {
 #header-nav li {
 	display: inline-block;
 	flex-grow: 1;
-	
 	color: #999;
+}
+
+#header-nav li a {
+	display: block;
+	width: auto;
+	height: var(--header-height);
+	line-height: var(--header-height);
+	
+	color: inherit;
+	text-decoration: none;
 	text-align: center;
-	vertical-align: center;
 	
 	cursor: pointer;
 	user-select: none;
@@ -83,7 +168,24 @@ h1 {
 
 #header-nav li:hover {
 	color: #000;
+	background-color: #eee;
 	cursor: pointer;
+}
+
+/* Footer */
+
+#page-footer {
+	box-sizing: border-box;
+	max-width: var(--max-width);
+	margin: 20px auto;
+	padding: 10px 30px;
+	color: #aaa;
+	border-top: 1px solid #aaa;
+	font-size: 12px;
+}
+
+#page-footer a, #page-footer a:visited {
+	color: #aaa;
 }
 
 /* About Me */
@@ -91,40 +193,32 @@ h1 {
 #about-box {
 	display: flex;
 	margin-bottom: 30px;
-	padding: 15px 30px;
-	background-color: #e7e7e7;
+	padding: 15px 20px 0 20px;
+	background-color: #eeeeee;
 }
 
 #about-text {
+	padding: 0 10px;
 	text-align: justify;
 }
 
-/* Content */
+/* Projects ----------------------------------------------------------------- */
 
-#content {
-	padding: 0 30px;
-	max-width: var(--max-width);
-}
-
-/* Projects */
-
-.project-row {
-	display: flex;
-	margin: 0 -40px;
+#projects {
+	margin-bottom: 40px;
 }
 
 .project-box {
-	flex-grow: 1;
-	flex-basis: 0;
-	padding: 20px 10px;
+	display: flex;
+	margin-top: 10px;
 }
 
 .project-image {
 	display: block;
-	width: 100%;
-	height: 160px;
-	margin-bottom: 20px;
-	border-radius: 6px;
+	width: 120px;
+	height: 80px;
+	margin: 0 20px 0 0;
+	border-radius: 4px;
 	overflow: hidden;
 }
 
@@ -133,28 +227,68 @@ h1 {
 	height: auto;
 }
 
+.project-info {
+	flex-grow: 1;
+	height: 80px;
+	vertical-align: center;
+}
+
 .project-title {
 	margin-bottom: 10px;
-	text-align: center;
-	font-family: var(--serif-fonts);
-	font-size: 22px;
+	font-family: var(--sans-fonts);
+	font-size: var(--title-size);
+	color: #339;
 }
 
 .project-desc {
 	color: gray;
-	text-align: center;
 }
 
-/* Posts */
+/* Posts -------------------------------------------------------------------- */
+
+#post-body {
+	text-align: justify;
+	counter-reset: section subsec subsub;
+}
+
+/* automatic heading numbers with CSS counters */
+#post-body h1 { counter-reset: subsec subsub; }
+#post-body h2 {	counter-reset: subsub;        }
+
+#post-body h1::before {
+	counter-increment: section;
+	content: counter(section);
+	margin-right: 0.5em;
+}
+
+#post-body h2::before {
+	counter-increment: subsec;
+	content: counter(section) "." counter(subsec);
+	margin-right: 0.5em;
+}
+/* - - - - - - - - - - - - - - - - - - - - - - */
 
 .post-box {
 	margin: 20px 0;
 	text-align: justify;
 }
 
-.post-title {
-	font-size: 22px;
+.post-box p {
+	display: inline;
+	padding: 0;
+	margin: 0;
+}
+
+a.post-title {
+	display: block;
+	color: #339;
+	font-size: var(--title-size);
+	text-decoration: none;
 	margin-bottom: 10px;
+}
+
+a.post-title:hover {
+	text-decoration: underline;
 }
 
 .post-date {
@@ -163,6 +297,48 @@ h1 {
 	font-style: italic;
 }
 
-.post-desc {
-	
+/* Article Styles ----------------------------------------------------------- */
+
+.article-header {
+	margin: 60px 0 20px 0;
+	text-align: center;
+}
+
+.article-title {
+	font-size: 24px;
+}
+
+.article-info {
+	font-size: 14px;
+	color: #666;
+}
+
+#toc {
+	margin: 20px 0;
+	overflow: hidden;
+	height: 0;
+	opacity: 0;
+	transition: height 0.5s ease-in-out, opacity 0.5s ease-in-out;
+}
+
+.article-content {
+	margin: 20px 0 0 0;
+}
+
+/* Theorem Boxes */
+
+.theorem {
+	margin: 10px 40px;
+	padding: 10px;
+	border: 1px solid black;
+}
+
+.theorem .label {
+	font-weight: 500;
+}
+
+.code-listing {
+	margin: 20px 40px;
+	font-size: 15px;
+	font-family: monospace;
 }

@@ -10,93 +10,78 @@
 
 	<!-- Google Fonts -->
 	<link href="https://fonts.googleapis.com/css?family=Droid+Sans|Droid+Sans+Mono|Droid+Serif" rel="stylesheet">
-	
+	<link href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,500,700" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css?family=Noto+Sans:400,400i,700" rel="stylesheet">
 	<!-- Site Styles -->
 	<link rel="stylesheet" href="http://benrbray.com/theme/css/style.css" type="text/css">
-	
+	<link rel="stylesheet" href="http://benrbray.com/theme/css/pygments.css" type="text/css">
+	<!-- KaTeX -->
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0-beta/dist/katex.min.css" integrity="sha384-9tPv11A+glH/on/wEu99NVwDPwkMQESOocs/ZGXPoIiLE8MU/qkqUcZ3zzL+6DuH" crossorigin="anonymous">
+    <!-- The loading of KaTeX is deferred to speed up page rendering -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.10.0-beta/dist/katex.min.js" integrity="sha384-U8Vrjwb8fuHMt6ewaCy8uqeUXv4oitYACKdB0VziCerzt011iQ/0TqlSlv8MReCm" crossorigin="anonymous"></script>
+    <!-- To automatically render math in text elements, include the auto-render extension: -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.10.0-beta/dist/contrib/auto-render.min.js" integrity="sha384-aGfk5kvhIq5x1x5YdvCp4upKZYnA8ckafviDpmWEKp4afOZEqOli7gqSnh8I6enH" crossorigin="anonymous"
+		onload='renderMathInElement(document.body, {
+			delimiters : [
+			{left: "$$", right: "$$", display: true},
+			{left: "\\(", right: "\\)", display: false},
+			{left: "$", right: "$", display: false},
+			],
+			macros : {
+				"\\X" : "\\mathcal{X}",
+				"\\L" : "\\mathcal{L}",
+				"\\R" : "\\mathbb{R}",
+			}
+		});'></script>
 </head>
 
 <body>
 
 <!-- CONTENT ------------------------------------------------------------------>
 
-<div id="page">
-	<!-- HEADER -->
+<!-- HEADER -->
+<div id="header-box">
 	<div id="header">
-		<div id="header-name">
-			Benjamin R. Bray
-		</div>
-		<ul id="header-nav">
-			<li>WRITING</li>
-			<li>PROJECTS</li>
-			<li>RESOURCES</li>
-			<li>RESUME</li>
-		</ul>
-	</div>
-	<!-- ABOUT ME -->
-	<div id="about-box">
-		<img src="http://benrbray.com/theme/images/ben-160px.jpg" style="width: 160px; height: 160px; border-radius: 100px; margin-right: 20px;">
-		<div id="about-text">
-			<p style="margin-top: 5px">I'm a first-year PhD student in Computer Science at <b>Georgia Tech</b> interested in <i>statistical learning theory</i> and <i>optimization</i>.  I studied math at the University of Michigan, where I also helped with a machine learning <a href="https://eecs445-f16.github.io/">class</a> and <a href="http://msail.github.io/">reading group</a>.
-			
-			<p>Off-campus I bike, cook, and play piano.  Maybe one day I'll make more <a href="http://www.newgrounds.com/portal/view/512482">games</a>.
-			 
-			<p>If you'd like to chat, feel free to write me at <a href="mailto:benrbray@gatech.edu">benrbray@gatech.edu</a>.
-		</div>
-	</div>
-	<!-- CONTENT -->
-	<div id="content">
-
-<!-- Article Loop --------------------------------------------------------->
-<div class="post-list">
-        <li class="tile project-tile">
-			<a href="http://benrbray.com/posts/2015/Aug/21/incompressible-fluid-simulation">
-				<div class="title">Incompressible Fluid Simulation</div>
-				<div class="preview"><p>Simulation of two-dimensional incompressible flow with periodic boundary conditions, achieved by solving the Euler Equations in the frequency domain via the Fast Fourier Transform (FFT).  Written in Java.</p></div>
-				<div class="info">
-					<div class="tags">POSTED IN [<Tag 'fluid-simulation'>]</div>
-					<div class="date">2015-08-21 00:00:00-04:00</div>
-				</div>
-			</a>
-		</li>
-<div>
-
+	<a id="header-name" href="http://benrbray.com/">
+		Benjamin R. Bray
+	</a><ul id="header-nav">
+		<li><a href="/blog">WRITING</a></li>
+		<li><a href="/projects">PROJECTS</a></li>
+		<li><a href="/resources">RESOURCES</a></li>
+		<li><a href="/resume.pdf">RESUME</a></li>
+	</ul>
 	</div>
 </div>
 
-<!-- FOOTER ------------------------------------------------------------------->
+<div id="page">
+	
+	<!-- CONTENT -->
+	<div id="content">
+<div class="center">
 
-<!-- Page Footer -->
-<div class="center"><div id="page-footer">
-	<span style="float: left">
-		Proudly powered by <a href="http://blog.getpelican.com/">Pelican</a> and hosted on <a href="https://github.com/benrbray/benrbray.github.io-source">GitHub</a>.
-	</span>
-	<span style="float: right">
-		Last updated on September 26, 2017
-	</span>
-</div></div>
+<h1 style="margin-bottom:40px;">Projects</h1>
 
-<!-- Alex Gorbatchev's SyntaxHighlighter  v3.0.83 -->
-<!--<link href="<?php bloginfo('template_url'); ?>/syntaxhighlighter_3.0.83/styles/shCore.css" rel="stylesheet" type="text/css"/>
-<link href="<?php bloginfo('template_url'); ?>/syntaxhighlighter_3.0.83/styles/shThemeDefault.css" rel="stylesheet" type="text/css"/>
-<script src="<?php bloginfo('template_url'); ?>/syntaxhighlighter_3.0.83/scripts/shCore.js" type="text/javascript"></script>
-<script src="<?php bloginfo('template_url'); ?>/syntaxhighlighter_3.0.83/scripts/shBrushJScript.js" type="text/javascript"></script>
+<!-- Article Loop ---------------------------------------------------------- -->
+<div class="post-list">
+    <div class="post-box">
+        <a class="post-title" href="posts/2015/Aug/21/incompressible-fluid-simulation">Incompressible Fluid Simulation</a>
+        <span class="post-date">Fri, 21 Aug 2015.</span> <p>Simulation of two-dimensional incompressible flow with periodic boundary conditions, achieved by solving the Euler Equations in the frequency domain via the Fast Fourier Transform (FFT).  Written in Java.</p>
+	</div>
+</div>
 
-<script type="text/javascript">
-	SyntaxHighlighter.defaults["tab-size"] = 2;
-	SyntaxHighlighter.all();
-</script>
--->
+</div>
+	</div>
 
-<!-- MathJax -->
-<script type="text/x-mathjax-config">
-MathJax.Hub.Config({
-  tex2jax: {inlineMath: [['$','$'], ['\\(','\\)']]}
-});
-</script>
-<script type="text/javascript" async
-  src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML">
-</script>
+	<!-- Page Footer -->
+	<div id="page-footer">
+		<span style="float: left">
+			Powered by <a href="http://blog.getpelican.com/">Pelican</a> and hosted on <a href="https://github.com/benrbray/benrbray.github.io-source">GitHub</a>.
+		</span>
+		<span style="float: right">
+			Last updated on October 10, 2018
+		</span>
+	</div>
+</div>
 
 </body>
 </html>

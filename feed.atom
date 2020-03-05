@@ -1,0 +1,1539 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Benjamin R. Bray</title><link href="http://benrbray.com/" rel="alternate"></link><link href="http://localhost:8000/feed.atom" rel="self"></link><id>http://benrbray.com/</id><updated>2020-03-02T00:00:00-05:00</updated><entry><title>Boggle / Unboggle</title><link href="http://benrbray.com/posts/2020/boggle-unboggle" rel="alternate"></link><published>2020-03-02T00:00:00-05:00</published><updated>2020-03-02T00:00:00-05:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2020-03-02:/posts/2020/boggle-unboggle</id><summary type="html">Finds all words in a boggle board using the trie data structure.</summary><content type="html">
+
+&lt;style&gt;
+grid-game {
+	display: block;
+	margin: 1em auto;
+}
+
+#crossword {
+	font-size: 1rem;
+}
+&lt;/style&gt;
+
+&lt;!-- Boggle Template --&gt;
+&lt;template id="grid-game-template"&gt;
+	&lt;style&gt;
+	:host {
+		/*all: initial; */
+		display: inline-block;
+		contain: content;
+		margin: 0 auto;
+		font-size: 2rem;
+
+		--cell-size: 2em;
+	}
+	table {
+		margin: 0 auto;
+		border: 2px solid black;
+		user-select: none;
+		border-collapse: collapse;
+	}
+	td {
+		position: relative;
+		box-sizing: border-box;
+		width: var(--cell-size);
+		height: var(--cell-size);
+		text-align: center;
+		vertical-align: middle;
+		border: 1px solid #aaa;
+	}
+	td.void {
+		background-color: black;
+		border: none;
+	}
+	td.disabled {
+		background-color: gray;
+	}
+	td.highlight:not([disabled]) {
+		background-color: lightblue;
+	}
+	td:focus, td.highlight:focus {
+		background-color: #8cbaca;
+	}
+	td.circled::before {
+		content: "";
+		box-sizing: border-box;
+		display: block;
+		position: absolute;
+		left: 0;
+		right: 0;
+		top: 0;
+		bottom: 0;
+		width: 100%;
+		height: 100%;
+		border: 1px solid black;
+		border-radius: 50%;
+	}
+	&lt;/style&gt;
+	&lt;table id="board" tabindex="0"&gt;
+		&lt;tbody id="boardBody"&gt;
+		&lt;/tbody&gt;
+	&lt;/table&gt;
+&lt;/template&gt;
+
+&lt;grid-game id="boggle" type="boggle"&gt;
+ABCDW
+EFGHX
+IJKLY
+MNOPZ
+&lt;/grid-game&gt;
+
+&lt;grid-game id="crossword" type="crossword"&gt;
+___@____@____
+___@____@____
+___@_________
+_____@@___@@@
+@@@__@_@_____
+_________@__@
+@@__@@_@@____
+___@_________
+_____@____@@@
+@@@_@_@@_@___
+_________@___
+_@__@____@___
+____@@@__@___
+&lt;/grid-game&gt;
+
+&lt;script&gt;
+"use strict"
+
+// get template
+let gridGameTemplate = document.getElementById("grid-game-template");
+
+function mod(a,b) {
+	return ((a%b)+b)%b;
+};
+
+const Highlight = {
+	NONE : null,
+	ROW  : 1,
+	COL  : 2
+}
+
+// define custom element
+class GridGameElement extends HTMLElement {
+	// key constants
+
+	constructor(){
+		console.log("boggle :: constructor");
+		// required call to base constructor
+		super();
+
+		// attach template as shadow dom
+		this.attachShadow({ mode: "open" });
+		this.shadowRoot.appendChild(gridGameTemplate.content.cloneNode(true));
+
+		// get named elements
+		this.boardElement = this.shadowRoot.getElementById("board");
+		this.boardBody = this.shadowRoot.getElementById("boardBody");
+
+		// focus / highlight
+		this.focusedCell = null;
+		this.highlightCells = null;
+		this.highlightFocusIdx = -1;
+		this.highlightMode = null;
+		
+		// game info
+		this.gameType = null;
+
+		// events
+		// TODO: oninput event
+		this.addEventListener("keydown", this.handleKeyDown);
+		this.addEventListener("blur", this.handleBlur);
+	}
+	
+	//// EVENTS //////////////////////////////////////////////////////
+
+	handleClick(row, col){
+		// ignore click when disabled
+		if(this.disabled){ return; }
+		console.log(`boggle :: click (r=${row}, c=${col})`);
+	}
+
+	// when one cell gains focus
+	handleFocus(row, col){
+		console.log(`boggle :: focus (r=${row}, c=${col})`);
+
+		// select row/col in crossword mode
+		if(this.gameType == "crossword"){
+			if(this.highlightMode == Highlight.COL){
+				// change highlight direction if clicking highlighted col
+				if(this.focusedCell &amp;&amp; this.focusedCell[1] == col){
+					this.highlightMode = Highlight.ROW;
+					this.highlightRow(row, col);
+				} else {
+					this.highlightCol(col, row);
+				}
+			} else {
+				// change highlight direction if clicking highlighted col
+				if(this.focusedCell &amp;&amp; this.focusedCell[0] == row){
+					this.highlightMode = Highlight.COL;
+					this.highlightCol(col, row);
+				} else {
+					this.highlightRow(row, col);
+				}
+			}
+		}
+
+		// set focused cell
+		this.focusedCell = [row, col];
+	}
+
+	// when the entire board loses focus
+	handleBlur(){
+		console.log("boggle :: blur");
+		this.focusedCell = null;
+	}
+
+	handleKeyDown(evt){
+		const Key = {
+			BACKSPACE : 8,
+			TAB : 9,
+			LEFT : 37,
+			RIGHT: 39,
+			UP : 38,
+			DOWN : 40,
+			DELETE : 46
+		}
+
+		const FocusAction = {
+			NONE : 0,
+			NEXT : 1,
+			PREV : 2,
+			UP : 3,
+			DOWN : 4
+		}
+
+		// ignore when inactive or disabled
+		if(this != document.activeElement){ return; }
+		if(this.disabled){ return; }
+		if(this.focusedCell == null){ return; };
+
+		let focusedCell = this.getCell(this.focusedCell[0], this.focusedCell[1]);
+
+		evt.preventDefault();
+		console.log("boggle :: pressed " + evt.keyCode);
+
+		let focusAction = FocusAction.NONE;
+
+		// handle alpha input
+		if(evt.keyCode &gt;= 65 &amp;&amp; evt.keyCode &lt;= 90){
+			console.log("boggle :: alpha input");
+			let char = String.fromCharCode(evt.keyCode);
+			focusedCell.textContent = char;
+			focusAction = FocusAction.NEXT;
+		}
+		// handle numeric input
+		if(evt.keyCode &gt;= 48 &amp;&amp; evt.keyCode &lt;= 57){
+			console.log("boggle :: numeric input");
+			let char = String.fromCharCode(evt.keyCode);
+			focusedCell.textContent = char;
+			focusAction = FocusAction.NEXT;
+		}
+		// handle deletion
+		if(evt.keyCode == Key.BACKSPACE){
+			focusedCell.textContent = "";
+			focusAction = FocusAction.PREV;
+		}
+		if(evt.keyCode == Key.DELETE){
+			focusedCell.textContent = "";
+			focusAction = FocusAction.NONE;
+		}
+
+		// handle direction keys
+		if(evt.keyCode == Key.LEFT){ focusAction = FocusAction.PREV; }
+		if(evt.keyCode == Key.RIGHT){ focusAction = FocusAction.NEXT; }
+		if(evt.keyCode == Key.UP){ focusAction = FocusAction.UP; }
+		if(evt.keyCode == Key.DOWN){ focusAction = FocusAction.DOWN; }
+
+		if(focusAction == FocusAction.NONE){ return; }
+		
+		if(this.highlightCells == null){
+			let row = this.focusedCell[0];
+			let col = this.focusedCell[1];
+			let disabled = true;
+			let cell = this.getCell(row, col);
+
+			//TODO:  what if entire row/col is disabled?
+			while(disabled &amp;&amp; focusAction != FocusAction.NONE){
+
+				if(focusAction == FocusAction.PREV){
+					[row, col] = this.cellPosPrev(row, col);
+				}
+				if(focusAction == FocusAction.NEXT){
+					[row, col] = this.cellPosNext(row, col);
+				}
+				if(focusAction == FocusAction.UP){
+					row = mod( (row - 1), this.numRows);
+				}
+				if(focusAction == FocusAction.DOWN){
+					row = mod( (row + 1), this.numRows);
+				}
+
+				cell = this.getCell(row, col);
+				disabled = cell.hasAttribute("disabled") &amp;&amp; cell.getAttribute("disabled") != "false";
+			}
+
+			cell.focus();
+		} else {
+			let disabled = true;
+			let cell = this.highlightCells[this.highlightFocusIdx];
+
+			//TODO:  what if entire row/col is disabled?
+			while(disabled &amp;&amp; focusAction != FocusAction.NONE){
+
+				if(focusAction == FocusAction.PREV){
+					this.highlightFocusIdx = mod(this.highlightFocusIdx - 1, this.highlightCells.length);
+				}
+				if(focusAction == FocusAction.NEXT){
+					this.highlightFocusIdx = mod(this.highlightFocusIdx + 1, this.highlightCells.length);
+				}
+				if(focusAction == FocusAction.UP){
+					// TODO (up row/col)
+				}
+				if(focusAction == FocusAction.DOWN){
+					// TODO (down row/col)
+				}
+
+				cell = this.highlightCells[this.highlightFocusIdx];
+				disabled = cell.hasAttribute("disabled") &amp;&amp; cell.getAttribute("disabled") != "false";
+			}
+
+			cell.focus();
+		}
+	}
+
+	cellPosNext(row, col){
+		if(col + 1 &gt;= this.numCols){
+			return [ mod(row + 1, this.numRows), 
+			         mod(col + 1, this.numCols) ];
+		} else {
+			return [ row, col + 1];
+		}
+	}
+	
+	cellPosPrev(row, col){
+		if(col - 1 &lt; 0){
+			return [ mod(row - 1, this.numRows), mod(col - 1, this.numCols) ];
+		} else {
+			return [ row, col - 1];
+		}
+	}
+
+	//////////////////////////////////////////////////////////////////
+
+	/* RESETBOARD
+	 * Modifies the board to match the current dimensions (numRows/numCols).
+	 */
+	resetBoard(){
+		console.log("boggle :: resetBoard()");
+
+		// unhighlight
+		this.unhighlight();
+
+		// remove rows as needed
+		while(this.boardBody.children.length &gt; this.numRows){
+			this.boardBody.removeChild(this.boardBody.lastChild);
+		}
+		// create rows as needed
+		while(this.boardBody.children.length &lt; this.numRows){
+			let tr = document.createElement("tr");
+			this.boardBody.appendChild(tr);
+		}
+
+		// modify existing rows add/remove cols as needed
+		for(let rowIdx = 0; rowIdx &lt; this.numRows; rowIdx++){
+			let rowElement = this.boardBody.children[rowIdx];
+			// remove cols as needed
+			while(rowElement.children.length &gt; this.numCols){
+				rowElement.removeChild(rowElement.lastChild);
+			}
+			// create cols as needed
+			while(rowElement.children.length &lt; this.numCols){
+				let td = document.createElement("td");
+				let colIdx = rowElement.children.length;
+				td.setAttribute("tabindex", 0);
+				td.addEventListener("click", 
+					evt =&gt; this.handleClick(rowIdx, colIdx)
+				);
+				td.addEventListener("focus", 
+					evt =&gt; this.handleFocus(rowIdx, colIdx)
+				);
+				rowElement.appendChild(td);
+			}
+		}
+	}
+
+	//////////////////////////////////////////////////////////////////
+
+	fromString(input){
+		// if input empty, fail gracefully
+		if(!input){ return null; }
+		input = input.trim();
+		if(input.length == 0){ return null; }
+		
+		// parse input and validate dimensions
+		let lines = input.split("\n");
+		let numRows = lines.length;
+		if(numRows &lt; 1){ return null; }
+		
+		let numCols = 0;
+		let data = [];
+
+		for(let r = 0; r &lt; numRows; r++){
+			let line = lines[r].split("");
+
+			// first row determines numCols
+			if(r == 0){ numCols = line.length; }
+			else if(line.length != numCols){ return null; }
+
+			// handle blank / disabled cells
+			for(let c = 0; c &lt; numCols; c++){
+				if(line[c] == "_"){
+					line[c] = "";
+				} else if(line[c] == "@"){
+					line[c] = null;
+				}
+			}
+
+			data.push(line);
+		}
+		
+		return {
+			numRows : numRows,
+			numCols : numCols,
+			data : data
+		};
+	}
+
+	//// CALLBACKS ///////////////////////////////////////////////////
+
+	connectedCallback(){
+		console.log("boggle :: connectedCallback");
+
+		// ISSUE: TextContent may not always exist when `connectedCallback()`
+		// is called.  See for example:
+		//    &gt; https://github.com/WebReflection/html-parsed-element
+		//    &gt; https://stackoverflow.com/questions/48498581/textcontent-empty-in-connectedcallback-of-a-custom-htmlelement
+		if(this.textContent){
+			let boardData = this.fromString(this.textContent);
+
+			if(boardData){
+				this.numRows = boardData.numRows;
+				this.numCols = boardData.numCols;
+
+				for(let r = 0; r &lt; this.numRows; r++){
+					for(let c = 0; c &lt; this.numCols; c++){
+						// TODO: make it easier to iterate over cells without
+						// depending on specific structure as a table
+						let data = boardData.data[r][c];
+						let cell = this.getCell(r,c);
+
+						if(data)          { cell.textContent = data; }
+						if(data === null) {
+							cell.classList.add("void");
+							cell.setAttribute("disabled","");
+							cell.removeAttribute("tabindex","");
+						}
+					}
+				}
+			}
+		}
+
+		this.resetBoard();
+	}
+
+	attributeChangedCallback(name, oldValue, newValue){
+		if(oldValue == newValue) return;
+		console.log(`boggle :: attribute changed (${name}, ${oldValue}, ${newValue})`);
+		
+		switch(name){
+			case "rows": this.numRows = newValue; break;
+			case "cols": this.numCols = newValue; break;
+			case "type":
+				this.gameType = newValue;
+		}
+
+		// when disabled, remove from tab order
+		if (this.disabled) {
+			this.boardElement.setAttribute('tabindex', '-1');
+			this.setAttribute('aria-disabled', 'true');
+		} else {
+			this.boardElement.setAttribute('tabindex', '0');
+			this.setAttribute('aria-disabled', 'false');
+		}
+	}
+
+	//// PROPERTIES //////////////////////////////////////////////////
+
+	// observed attributes
+
+	static get observedAttributes(){
+		return ["disabled", "cols", "rows", "type"];
+	}
+
+	// disabled
+
+	get disabled() {
+		return this.hasAttribute("disabled");
+	}
+
+	set disabled(val) {
+		if(val){ this.setAttribute("disabled", ""); }
+		else   { this.removeAttribute("disabled");  }
+	}
+
+	// dimensions
+
+	get numRows() { return Number(this.getAttribute("rows")) || 4; }
+	get numCols() { return Number(this.getAttribute("cols")) || 4; }
+	set numRows(count) { 
+		this.setAttribute("rows", (count &gt; 0) ? count : 0 );
+		this.resetBoard();
+	}
+	set numCols(count) {
+		this.setAttribute("cols", (count &gt; 0) ? count : 0 );
+		this.resetBoard();
+	}
+
+	getCell(row, col){
+		return this.boardBody.children[row].children[col];
+	}
+	getFocusedCell(row, col){
+		return this.boardBody.children[row].children[col];
+	}
+
+	// Selection -----------------------------------------------------
+
+	unhighlight(){
+		if(!this.highlightCells) { return; }
+
+		for(let k = 0; k &lt; this.highlightCells.length; k++){
+			this.highlightCells[k].classList.remove("highlight");
+		}
+		
+		this.highlightCells = null;
+	}
+
+	// selection
+
+	cellIsDisabled(row, col){
+		let cell = this.getCell(row,col);
+		return (cell.hasAttribute("disabled") &amp;&amp; cell.getAttribute("disabled") != "false");
+	}
+
+	highlight(coords, focusIdx=0){
+		if(!coords){ this.unselect(); return; }
+
+		this.unhighlight();
+		this.highlightCells = [];
+		for(let k = 0; k &lt; coords.length; k++){
+			let pos = coords[k];
+			let cell = this.getCell(pos[0], pos[1]);
+			this.highlightCells.push(cell);
+			cell.classList.add("highlight");
+		}
+
+		if(this.highlightCells.length &gt; 0){
+			this.highlightFocusIdx = focusIdx;
+			this.highlightCells[focusIdx].focus();
+		} else {
+			this.highlightCells = null;
+			this.highlightFocusIdx = -1;
+		}
+	}
+
+	highlightRow(row, focusCol=0){
+		console.log(`boggle :: highlightRow (${row}, ${focusCol})`);
+		if(row &lt; 0 || row &gt; this.numRows){ this.unhighlight(); return; }
+
+		let coords = [];
+		for(let c = 0; c &lt; this.numCols; c++){
+			coords.push([row,c]);
+		}
+		
+		if(focusCol &lt; 0) { focusCol = 0; }
+		if(focusCol &gt; coords.length) { focusCol = coords.length; }
+		this.highlight(coords, focusCol);
+	}
+
+	highlightCol(col, focusRow=0){
+		if(col &lt; 0 || col &gt; this.numCols){ this.unhighlight(); return; }
+
+		let coords = [];
+		for(let r = 0; r &lt; this.numRows; r++){
+			coords.push([r,col]);
+		}
+
+		this.highlight(coords, focusRow);
+	}
+}
+
+window.customElements.define("grid-game", GridGameElement);
+&lt;/script&gt;
+
+</content><category term="algorithms"></category><category term="satisfiability"></category></entry><entry><title>Hough Transform</title><link href="http://benrbray.com/posts/2020/hough-transform" rel="alternate"></link><published>2020-01-10T00:00:00-05:00</published><updated>2020-01-10T00:00:00-05:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2020-01-10:/posts/2020/hough-transform</id><summary type="html">&lt;p&gt;Detect lines in an image with the Hough transform.&lt;/p&gt;</summary><content type="html"></content><category term="image-processing"></category></entry><entry><title>Newton's Method, Optimization, and Root-finding</title><link href="http://benrbray.com/posts/2019/newtons-method-optimization-and-root-finding" rel="alternate"></link><published>2019-08-21T00:00:00-04:00</published><updated>2019-08-21T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2019-08-21:/posts/2019/newtons-method-optimization-and-root-finding</id><summary type="html">&lt;p&gt;There are two versions of Newton's method, one for root-finding, &lt;span class="math"&gt;\(f(x) = 0\)&lt;/span&gt;, and one for optimization, &lt;span class="math"&gt;\(min_{x \in \R^n} f(x)\)&lt;/span&gt;.  In this post, I show explicitly that Newton's method for optimization is simply Newton's method applied to finding fixed points of the gradient map &lt;span class="math"&gt;\(x \mapsto \nabla x f\)&lt;/span&gt;.&lt;/p&gt;</summary><content type="html">&lt;h1&gt;Newton's Method for Root-finding&lt;/h1&gt;
+&lt;div class="math"&gt;$$
+x_{t+1} \equiv x_t - \frac{f(x_t)}{f'(x_t)}
+$$&lt;/div&gt;
+&lt;h1&gt;Newton's Method for Optimization&lt;/h1&gt;
+&lt;p&gt;Now, suppose we wish to minimize a function &lt;span class="math"&gt;\(f : \R \rightarrow \R\)&lt;/span&gt;.  The standard approach looks for &lt;strong&gt;stationary points&lt;/strong&gt; satisfying the first-order condition &lt;span class="math"&gt;\(f'(x) = 0\)&lt;/span&gt;.  If &lt;span class="math"&gt;\(f\)&lt;/span&gt; is convex (for example), then there is a unique stationary point at the global minimum of &lt;span class="math"&gt;\(f\)&lt;/span&gt;.&lt;/p&gt;
+&lt;p&gt;To find a stationary point, we can apply Newton's method to find roots of the derivative &lt;span class="math"&gt;\(f' : \R \rightarrow \R\)&lt;/span&gt; mapping &lt;span class="math"&gt;\(x \mapsto f'(x)\)&lt;/span&gt;.&lt;/p&gt;
+&lt;div class="math"&gt;$$
+x_{t+1} \equiv x_t - \frac{f'(x_t)}{f''(x_t)}
+$$&lt;/div&gt;
+&lt;p&gt;So, the connection between Newton's method for optimization and root finding in one dimension is clear.  However, in two dimensions, Newton's method for optimization looks like&lt;/p&gt;
+&lt;div class="math"&gt;$$
+x_{t+1} \equiv x_t - (\nabla^2_{x_t} f)^{-1} (\nabla_{x_t} f) 
+$$&lt;/div&gt;
+&lt;h1&gt;Multivariate Newton's Method for Optimization&lt;/h1&gt;
+&lt;p&gt;Now, suppose we want to minimize the multivariate function &lt;span class="math"&gt;\(f : \R^n \rightarrow \R\)&lt;/span&gt;.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;The derivative evaluated at any &lt;span class="math"&gt;\(x \in \R^n\)&lt;/span&gt; is a linear transformation &lt;span class="math"&gt;\(\nabla_x f : \R^n \rightarrow \R\)&lt;/span&gt;&lt;ul&gt;
+&lt;li&gt;Can be represented by a row vector.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;At a critical point, the function &lt;span class="math"&gt;\(\nabla_x f\)&lt;/span&gt; should map every input to zero.&lt;ul&gt;
+&lt;li&gt;i.e. at a critical point &lt;span class="math"&gt;\(\nabla_x f\)&lt;/span&gt; is represented by the zero vector.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div style="border:1px solid black; padding:20px; margin:20px"&gt;
+&lt;b&gt;Problem:&lt;/b&gt;  Derive a multivariable version of Newton's method for finding critical points of $f : \R^n \rightarrow \R$.
+&lt;ul&gt;
+    &lt;li&gt;(Use the linear approximation interpretation of Newton's root-finding method.)&lt;/li&gt;
+    &lt;li&gt;What assumptions are needed about the function $f$ for this method to work?&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/div&gt;
+
+&lt;h2&gt;Solution&lt;/h2&gt;
+&lt;p&gt;Essentially, we want to find zeros of the map &lt;span class="math"&gt;\(\varphi : \R^n \rightarrow \R^n\)&lt;/span&gt; mapping &lt;span class="math"&gt;\(x \mapsto \nabla_x f\)&lt;/span&gt;.  The linear approximation to &lt;span class="math"&gt;\(\varphi\)&lt;/span&gt; at a point &lt;span class="math"&gt;\(x_t \in \R^n\)&lt;/span&gt; is
+&lt;/p&gt;
+&lt;div class="math"&gt;$$
+\psi(y) = \varphi(x_t) + (\nabla_{x_t} \varphi) (y-x_t)
+$$&lt;/div&gt;
+&lt;p&gt;Since &lt;span class="math"&gt;\(\varphi : \R^n \rightarrow \R^n\)&lt;/span&gt;, its derivative &lt;span class="math"&gt;\(\varphi \in L(\R^n \rightarrow \R^n)\)&lt;/span&gt; can be represented by an &lt;span class="math"&gt;\((n \times n)\)&lt;/span&gt; matrix.  Assume this matrix is invertible.  Choose &lt;span class="math"&gt;\(x_{t+1}\)&lt;/span&gt; to be a root of &lt;span class="math"&gt;\(\psi\)&lt;/span&gt;,&lt;/p&gt;
+&lt;div class="math"&gt;$$
+\begin{aligned}
+\psi(x_{t+1}) = 0 &amp;amp;\implies (\nabla_{x_t} \varphi) (x_{t+1}-x_t) = -\varphi(x_t) \\
+&amp;amp;\implies x_{t+1} - x_t = - (\nabla_{x_t} \varphi)^{-1} \varphi(x_t) \\
+\end{aligned}
+$$&lt;/div&gt;
+&lt;p&gt;Notice that &lt;span class="math"&gt;\(\nabla_{x_t} \varphi\)&lt;/span&gt; is the Hessian of &lt;span class="math"&gt;\(f\)&lt;/span&gt;, and &lt;span class="math"&gt;\(\varphi(x_t)\)&lt;/span&gt; was defined to be the gradient.  Therefore, multivariate Newton's method for optimization has the form&lt;/p&gt;
+&lt;div class="math"&gt;$$
+x_{t+1} = x_t - (\nabla^2_{x_t} f)^{-1} (\nabla_{x_t} f)
+$$&lt;/div&gt;
+&lt;h1&gt;Bonus: Newton's Method for Vector-valued Functions&lt;/h1&gt;
+&lt;p&gt;TODO&lt;/p&gt;</content></entry><entry><title>Gradients are Row Vectors (and you can too!)</title><link href="http://benrbray.com/posts/2019/gradients-are-row-vectors-and-you-can-too" rel="alternate"></link><published>2019-08-20T00:00:00-04:00</published><updated>2019-08-20T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2019-08-20:/posts/2019/gradients-are-row-vectors-and-you-can-too</id><summary type="html">&lt;p&gt;Mathematicians tend to agree that gradients are row vectors, but for some reason computer scientists can't get on borad with the idea.  The goal of this post is to explain why gradients are most naturally expressed as row vectors, and to demonstrate the advantages of this perspective.&lt;/p&gt;</summary><content type="html">&lt;div class="math"&gt;$$
+\newcommand{\grad}{\nabla}
+$$&lt;/div&gt;
+&lt;p&gt;In this post, we will explore the following question:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Should the gradient of a function &lt;span class="math"&gt;\(F: \R^n \rightarrow \R\)&lt;/span&gt; be a row or column vector?&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;The answer is quite controversial depending on who you ask!  Mathematicians tend to agree that gradient sshould be row vectors, but for some reason computer scientists can't get on board with the idea.  &lt;/p&gt;
+&lt;p&gt;The &lt;a href="https://en.wikipedia.org/wiki/Matrix_calculus"&gt;matrix calculus entry&lt;/a&gt; on Wikipedia &lt;a href="https://en.wikipedia.org/wiki/Talk:Matrix_calculus"&gt;endeavors&lt;/a&gt; to remain neutral, suggesting that perhaps the choice is inconsequental and both conventions have their merits.  &lt;strong&gt;Wrong!&lt;/strong&gt;  I claim that the gradient-as-column-vector dogma prevalent in computer science is actively holding us back from a deeper understanding of derivatives!&lt;/p&gt;
+&lt;h1&gt;Derivatives and Linear Maps&lt;/h1&gt;
+&lt;p&gt;&lt;strong&gt;Def:&lt;/strong&gt; (One dimension) The function &lt;span class="math"&gt;\(f : \R \rightarrow \R\)&lt;/span&gt; is differentiable at &lt;span class="math"&gt;\(x \in \R\)&lt;/span&gt; if the following limit exists:
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$
+    f'(x) \equiv \lim_{h \rightarrow 0} \frac{f(x+h)-f(x)}{h}
+    $$&lt;/div&gt;
+&lt;p&gt;Notice that if &lt;span class="math"&gt;\(f'(x) = 0\)&lt;/span&gt; exists, then it must satisfy&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="err"&gt;$$&lt;/span&gt;
+&lt;span class="err"&gt;\begin{align}&lt;/span&gt;
+&lt;span class="err"&gt;f&amp;#39;(x) \equiv \lim_{h \rightarrow 0} \frac{f(x+h)-f(x)}{h}&lt;/span&gt;
+&lt;span class="err"&gt;&amp;amp;\iff&lt;/span&gt;
+&lt;span class="err"&gt;\lim_{h \rightarrow 0} {f(x+h) - f(x) - hf&amp;#39;(x)}{h} = 0&lt;/span&gt;
+&lt;span class="err"&gt;\end{align}&lt;/span&gt;
+&lt;span class="err"&gt;$$&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;An equivalent definition is&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Def:&lt;/strong&gt; (One dimension) The function &lt;span class="math"&gt;\(f : \R \rightarrow \R\)&lt;/span&gt; is differentiable at &lt;span class="math"&gt;\(x \in \R\)&lt;/span&gt; if there exists a scalar &lt;span class="math"&gt;\(a \in \R\)&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;One can show that if such an &lt;span class="math"&gt;\(a \in \R\)&lt;/span&gt; exists, it is unique.  So we can unambiguously use the notation &lt;span class="math"&gt;\(f'(x)\)&lt;/span&gt; to refer to the unique derivative of &lt;span class="math"&gt;\(f\)&lt;/span&gt; at &lt;span class="math"&gt;\(a\)&lt;/span&gt;.&lt;/p&gt;
+&lt;h1&gt;Bonus:  Differentiation as a Functor&lt;/h1&gt;
+&lt;p&gt;Differentiation is a functor!&lt;/p&gt;</content></entry><entry><title>Path-Sensitive Data-Flow Analysis with LLVM</title><link href="http://benrbray.com/posts/2019/path-sensitive-data-flow-analysis-with-llvm" rel="alternate"></link><published>2019-04-15T00:00:00-04:00</published><updated>2019-04-15T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2019-04-15:/posts/2019/path-sensitive-data-flow-analysis-with-llvm</id><summary type="html">&lt;p&gt;Implementation of Thakur &amp;amp; Govindarajan 2008, "Comprehensive Path-Sensitive Data-Flow Analysis" as an LLVM transformation pass.&lt;/p&gt;</summary><content type="html">&lt;p&gt;Implementation of Thakur &amp;amp; Govindarajan 2008, &lt;a href="http://thakur.cs.ucdavis.edu/assets/pubs/thakur_govindarajan_CGO08.pdf"&gt;"Comprehensive Path-Sensitive Data-Flow Analysis"&lt;/a&gt; as an LLVM transformation pass.  Written as part of a final project for &lt;strong&gt;CS 6241 Compiler Optimization&lt;/strong&gt; at Georgia Tech.&lt;/p&gt;</content><category term="compilers"></category><category term="programming-languages"></category><category term="llvm"></category></entry><entry><title>Superscalar Processor</title><link href="http://benrbray.com/posts/2019/superscalar-processor" rel="alternate"></link><published>2019-03-08T00:00:00-05:00</published><updated>2019-03-08T00:00:00-05:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2019-03-08:/posts/2019/superscalar-processor</id><summary type="html">&lt;p&gt;Toy implementation of a superscalar processor.&lt;/p&gt;</summary><content type="html">&lt;p&gt;Toy implementation of simultaneous multi-threating for a superscalar architecture.  Submitted as a project for &lt;strong&gt;CS 6290 High-Performance Computer Architecture&lt;/strong&gt; at Georgia Tech.&lt;/p&gt;</content><category term="compilers"></category><category term="programming-languages"></category><category term="llvm"></category></entry><entry><title>Algorithms for Random Discrete Structures</title><link href="http://benrbray.com/posts/2018/algorithms-for-random-discrete-structures" rel="alternate"></link><published>2018-05-02T00:00:00-04:00</published><updated>2018-05-02T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2018-05-02:/posts/2018/algorithms-for-random-discrete-structures</id><summary type="html">&lt;p&gt;Many applications require the random sampling of matrices with prescribed structure for modeling, statistical, or aesthetic purposes.  What does it mean for a random variable to be matrix-valued?  What can we say about the eigenvalues of a random matrix?  How can we design algorithms to sample from a target distribution on a group or manifold?  More generally, what can we say deterministic algorithms with random inputs?  Our study of random matrices will lead us to the &lt;em&gt;subgroup algorithm&lt;/em&gt; (Diaconis 1987), which subsumes many familiar random sampling procedures.&lt;/p&gt;</summary><content type="html">&lt;h1&gt;Introduction&lt;/h1&gt;
+&lt;p&gt;Randomness[ref]footnote[/ref] plays a critical role in computer science and applied mathematics.  In the sciences, randomness allows researchers to study average-case behavior of physical models which would otherwise be too complex or time-consuming to simulate exactly.  In computing, randomized algorithms have become essential tools for approximating NP-Hard problems.&lt;/p&gt;
+&lt;p&gt;In this post, we will survey strategies for designing algorithms to randomly generate objects with nontrivial structure from a prescribed distribution.  For example, we may wish to choose elements uniformly at random from a group or generate a set of random unitary matrices whose behavior is somehow representative of the class of unitary matrices generally.  The samples are intended for use as input to a known model or algorithm.&lt;/p&gt;
+&lt;p&gt;We must take care to distinguish between the three different types of random sampling that are commonly employed.  Genuine &lt;em&gt;uniformly random&lt;/em&gt; samples are easiest to generate, due to independence, but individual realizations will naturally have regions of low and high density.  Our intuitive understanding of uniformity is more like &lt;em&gt;uniformly spaced&lt;/em&gt; samples, where the goal is to maximize coverage and avoid redundancy.  In the extreme, we may want to sample &lt;em&gt;rare events&lt;/em&gt; to study the worst-case behavior of a system.  These differences are shown informally in Figure \ref{fig:kinds-of-randomness}.&lt;/p&gt;
+&lt;p&gt;It also helps to keep the reverse problem in mind:  how does a deterministic algorithm behave when fed random inputs?&lt;/p&gt;
+&lt;h1&gt;Preliminaries&lt;/h1&gt;
+&lt;p&gt;In this section, we briefly review the necessary mathematical background and introduce notation.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Unitary Matrices.&lt;/strong&gt;  A matrix &lt;span class="math"&gt;\(U \in \mathbb{C}^{n \times n}\)&lt;/span&gt; with orthonormal columns is called &lt;em&gt;unitary&lt;/em&gt;.  Equivalently, &lt;span class="math"&gt;\(U U^* = I\)&lt;/span&gt;, where &lt;span class="math"&gt;\(U^*\)&lt;/span&gt; denotes the conjugate transpose.  The eigenvalues of a unitary matrix have unit modulus, and accordingly &lt;span class="math"&gt;\(|\det U| = 1\)&lt;/span&gt;.  Real matrices &lt;span class="math"&gt;\(M \in \mathbb{R}^{n \times n}\)&lt;/span&gt; satisfying these conditions are called &lt;em&gt;orthogonal&lt;/em&gt;.&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Groups.&lt;/strong&gt;  A group &lt;span class="math"&gt;\((G,*)\)&lt;/span&gt; consists of an associative operation &lt;span class="math"&gt;\(* : G \times G \rightarrow G\)&lt;/span&gt; over a set &lt;span class="math"&gt;\(G\)&lt;/span&gt; which contains a (unique) identity element &lt;span class="math"&gt;\(1_G\)&lt;/span&gt; and a (unique) inverse &lt;span class="math"&gt;\(a^{-1}\)&lt;/span&gt; for each element &lt;span class="math"&gt;\(a \in G\)&lt;/span&gt;, with &lt;span class="math"&gt;\(a^{-1} a = a a^{-1} = 1_G\)&lt;/span&gt;.  For convenience, we call &lt;span class="math"&gt;\(a * b\)&lt;/span&gt; multiplication and occasionally write &lt;span class="math"&gt;\(ab\)&lt;/span&gt; instead.  Additive notation &lt;span class="math"&gt;\(a +b\)&lt;/span&gt; is used for commutative groups.  A set &lt;span class="math"&gt;\(S \subset G\)&lt;/span&gt; is a &lt;em&gt;subgroup&lt;/em&gt; if it is closed under multiplication and inverses with respect to the group operation. &lt;/p&gt;
+&lt;p&gt;Familiar commutative groups are &lt;span class="math"&gt;\((\mathbb{Z}, +)\)&lt;/span&gt;, &lt;span class="math"&gt;\((\mathbb{Q}, +)\)&lt;/span&gt;, and &lt;span class="math"&gt;\((\mathbb{R}_{\neq 0}, \cdot)\)&lt;/span&gt;.  The invertible matrices over a field &lt;span class="math"&gt;\(F\)&lt;/span&gt; form a non-commutative group &lt;span class="math"&gt;\(\mathrm{GL}_n(F)\)&lt;/span&gt; with respect to matrix multiplication, known as the &lt;em&gt;general linear group&lt;/em&gt;.  The orthogonal matrices &lt;span class="math"&gt;\(\mathrm{O}_n(\mathbb{R})\)&lt;/span&gt; and unitary matrices &lt;span class="math"&gt;\(\mathrm{U}_n(\mathbb{C})\)&lt;/span&gt; both form subgroups of &lt;span class="math"&gt;\(\mathrm{GL}_n(\mathbb{C})\)&lt;/span&gt;. The &lt;em&gt;special linear group&lt;/em&gt; &lt;span class="math"&gt;\(\mathrm{SL}_n(\mathbb{C})\)&lt;/span&gt; is the set of matrices with determinant one.&lt;/p&gt;
+&lt;p&gt;Groups of transformations are useful for understanding the &lt;em&gt;invariants&lt;/em&gt; of an object.  The set of all permutations on &lt;span class="math"&gt;\(n\)&lt;/span&gt; elements forms the &lt;em&gt;symmetric group&lt;/em&gt; &lt;span class="math"&gt;\(S_n\)&lt;/span&gt; with respect to function composition.  An important subgroup is the &lt;em&gt;alternating group&lt;/em&gt; &lt;span class="math"&gt;\(A_n\)&lt;/span&gt; consisting of only even permutations.  For a full treatment of group theory, see (Pinter 2010).&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Topological Groups.&lt;/strong&gt; Of particular interest are groups whose underlying set possesses additional topological or geometric structure.  Studying transformations on such spaces, e.g. homotopy groups in algebraic topology, can reveal important invariant structure which does not readily present itself through other methods.  In this report, we favor intuition at the expense of rigor, so be warned that statements below may require slight modifications to be technically correct.&lt;/p&gt;
+&lt;p&gt;A &lt;em&gt;Lie group&lt;/em&gt; is a smooth manifold &lt;span class="math"&gt;\(G\)&lt;/span&gt; with group structure such that the multiplication and inverse maps are smooth. A &lt;em&gt;Haar measure&lt;/em&gt; on a compact topological group &lt;span class="math"&gt;\(G\)&lt;/span&gt; is a Borel measure (defined on a &lt;span class="math"&gt;\(\sigma\)&lt;/span&gt;-algebra containing the open sets) which is invariant under the group operation, that is, &lt;span class="math"&gt;\(\mu(gE) = \mu(E)\)&lt;/span&gt; for any &lt;span class="math"&gt;\(g \in G\)&lt;/span&gt; and measurable &lt;span class="math"&gt;\(E \subset G\)&lt;/span&gt;.  We sometimes describe this as "translation" or "rotation" invariance depending on the context.  Every compact Lie group has a unique Haar measure &lt;span class="math"&gt;\(\mu\)&lt;/span&gt;, which can easily be normalized to a probability measure since &lt;span class="math"&gt;\(\mu(G) &amp;lt; +\infty\)&lt;/span&gt;.  For a proof, see (Tao 2011).  The general linear group &lt;span class="math"&gt;\(GL_n(\mathbb{C})\)&lt;/span&gt; is not compact, but the groups &lt;span class="math"&gt;\(\mathrm{O}_n(\mathbb{R})\)&lt;/span&gt;, &lt;span class="math"&gt;\(\mathrm{U}_n(\mathbb{C})\)&lt;/span&gt;, and &lt;span class="math"&gt;\(SL_n(\mathbb{C})\)&lt;/span&gt; are compact.  For this reason, they are sometimes called the &lt;em&gt;classical compact groups&lt;/em&gt;.  Our goal is to generate random samples from these groups according to the Haar measure, which can be thought of as a generalization of the uniform distribution.&lt;/p&gt;
+&lt;h1&gt;Random Matrix Theory&lt;/h1&gt;
+&lt;p&gt;A &lt;em&gt;matrix ensemble&lt;/em&gt; is a family of matrices together with a probability distribution.  The most well-studied examples are:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;em&gt;Gaussian Orthogonal Ensemble&lt;/em&gt;, with i.i.d. real entries &lt;span class="math"&gt;\(\mathcal{N}(0,1)\)&lt;/span&gt;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;Gaussian Unitary Ensemble&lt;/em&gt;, with i.i.d. complex entries &lt;span class="math"&gt;\(\mathcal{N}(0,1) + i \mathcal{N}(0,1)\)&lt;/span&gt;&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;Gaussian Symplectic Ensemble&lt;/em&gt;, with i.i.d. quaternion entries &lt;span class="math"&gt;\(\mathcal{N} + i \mathcal{N} + j \mathcal{N} + k \mathcal{N}\)&lt;/span&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Note that these processes do not necessarily produce orthogonal or unitary matrices; the name comes from the orthogonal / unitary invariance of the corresponding probability measures, as in the following lemma:&lt;/p&gt;
+&lt;!-- Lemma --&gt;
+
+&lt;div class="theorem"&gt;
+&lt;span class="label"&gt;Lemma.&lt;/span&gt; (c.f. Mezzadri 2006)
+The measure $d\mu_G$ of the Gaussian Unitary Ensemble is invariant under left and right multiplication of $Z$ by arbitrary unitary matrices,
+    $$
+    d\mu_G(UZ) = d\mu_G(ZV) = d\mu_G(Z) \text{ for all } U,V \in \mathrm{U}_n(\mathbb{C})
+    $$
+&lt;/div&gt;
+
+&lt;h2&gt;Eigenvalues and The Circular Law&lt;/h2&gt;
+&lt;p&gt;The eigenvalues of a random matrix are themselves random, and it is natural to ask with what distribution.  One might suspect that the particular choice of distribution for the matrix entries would determine the asymptotic behavior; however, the &lt;em&gt;universality principle&lt;/em&gt; (Tao 2010) states that the choice does not matter in the limit, effectively absolving us of our guilt for not choosing a more complicated distribution than the standard normal.  The eigenvalue distribution of matrices with independent Gaussian entries has long been known to obey the &lt;em&gt;circular law&lt;/em&gt;, and universality immediately gives the following theorem.  A related &lt;em&gt;semicircular law&lt;/em&gt; is known for random Hermitian matrices. &lt;/p&gt;
+&lt;!-- Theorem: Circular Law --&gt;
+
+&lt;div class="theorem"&gt;
+&lt;span class="label"&gt;Theorem.&lt;/span&gt; (Tao 2008) Let $x$ be a complex random variable of mean zero and unit variance.  Let $M_n \in \mathbb{C}^{n \times n}$ be a random matrix whose entries are i.i.d. copies of $x$.  In the limit $n \rightarrow \infty$, the empirical distribution of the eigenvalues of $\frac{1}{\sigma \sqrt{n}} M_n$ converges (both in probability almost surely) to the uniform distribution over the complex unit disk.
+&lt;/div&gt;
+
+&lt;p&gt;The circular law is verified empirically in Figure \ref{fig:goe-gue-eigs} for the Gaussian ensembles.  For the real case on the right, there is an unexpected concentration of eigenvalues exactly on the real line, suggesting that the eigenvalue distribution is &lt;em&gt;not absolutely continuous&lt;/em&gt; with respect to Lebesgue measure.  The joint eigenvalue density for the GOE was worked out explicitly by (Edelman 1997) and integrated, leading to the following computation:&lt;/p&gt;
+&lt;!-- Theorem:  Probability that GOE has real eigenvalues --&gt;
+
+&lt;div class="theorem"&gt;
+&lt;span class="label"&gt;Theorem.&lt;/span&gt; (Edelman 1997)
+Let $M \in \mathbb{R}^{n \times n}$ have independent standard normal entries.  The probability that $M$ has $k$ eigenvalues has the form $r + s\sqrt{2}$ for some rational $r,s \in \mathbb{Q}$.  In particular, the probability that a random matrix has all real eigenvalues is $1 / 2^{n(n-1)/4}$.
+&lt;/div&gt;
+
+&lt;h2&gt;Random Structured Matrices&lt;/h2&gt;
+&lt;p&gt;Some applications call for matrices with additional structure.  For example, it may be desirable to generate random diagonal, symmetric, orthogonal, or upper-triangular matrices.  One might think of several clever ways to accomplish this in Python:&lt;/p&gt;
+&lt;style&gt;
+#clever-table {
+    border-spacing: 20px 0;
+}
+#clever-table td:nth-child(1) {
+    text-align: right;
+    margin-right: 10px;
+}
+#clever-table td:nth-child(2) {
+    font-family: monospace;
+    font-size: 14px;
+}
+&lt;/style&gt;
+
+&lt;table id="clever-table"style="margin: 0 auto;"&gt;
+    &lt;colgroup&gt;
+        &lt;col style="width: 50%"&gt;
+        &lt;col style="width: 50%"&gt;
+    &lt;/colgroup&gt;
+    &lt;tr&gt;&lt;td&gt;Real&lt;/td&gt;&lt;td&gt;A = randn(n,n)&lt;td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;Complex&lt;/td&gt;&lt;td&gt;B = randn(n,n) + 1j * randn(n,n)&lt;td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;Diagonal&lt;/td&gt;&lt;td&gt;D = diag(diag(A))&lt;td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;Symmetric&lt;/td&gt;&lt;td&gt;S = A + A.T&lt;td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;Orthogonal&lt;/td&gt;&lt;td&gt;Q,_ = qr(A)&lt;td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;Upper-triangular&lt;/td&gt;&lt;td&gt;_,R = qr(A)&lt;td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;Lower-triangular&lt;/td&gt;&lt;td&gt;L = chol(A)&lt;td&gt;&lt;/tr&gt;
+&lt;/table&gt;
+
+&lt;p&gt;These methods certainly produce matrices of the desired type, but for serious applications it is important to understand the resulting distributions.  Furthermore, the general problem of understanding how deterministic algorithms (such as the &lt;code&gt;numpy&lt;/code&gt;} implementation of QR factorization) is useful for algorithm design.  In the next section, we show that the naive method for generating random unitary matrices is biased and suggest a correction.&lt;/p&gt;
+&lt;h1&gt;Random Unitary Matrices&lt;/h1&gt;
+&lt;p&gt;Assume we wish to generate random unitary matrices according to the Haar measure on &lt;span class="math"&gt;\(U_n(\mathbb{C})\)&lt;/span&gt;.  The eigenvalues &lt;span class="math"&gt;\(e^{i\theta}\)&lt;/span&gt; of a unitary matrix have unit modulus, so we are effectively choosing random arguments &lt;span style="white-space: pre;"&gt;&lt;span class="math"&gt;\(\theta\)&lt;/span&gt;,&lt;/span&gt; which we would like to be uniform on the complex unit circle.  As shown in Figure \ref{fig:random-unitary-histogram}, the naive method &lt;code&gt;U,_ = qr(B)&lt;/code&gt; applied to a random &lt;code&gt;B&lt;/code&gt; with compex Gaussian entries fails to have a uniform eigenvalue distribution.&lt;/p&gt;
+&lt;p&gt;As described by (Mezzadri 2006), this sampling bias arises from the fact that the QR factorization is not unique.  If &lt;span class="math"&gt;\(Z \in \mathrm{GL}_n(\mathbb{C})\)&lt;/span&gt; factorizes as &lt;span class="math"&gt;\(Z = QR\)&lt;/span&gt; and &lt;span class="math"&gt;\(\Lambda = \mathrm{diag}(e^{i\theta_1}, \dots, e^{i\theta_n})\)&lt;/span&gt; is any diagonal unitary matrix, then &lt;span class="math"&gt;\(Z = (Q \Lambda) (\Lambda^{-1}R)\)&lt;/span&gt; is also a valid QR factorization.  In effect, the QR factorization is a &lt;em&gt;multi-valued map&lt;/em&gt;
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$
+    \mathrm{QR} : \mathrm{GL}_n(\mathbb{C}) \rightarrow \mathrm{U}_n(\mathbb{C}) \times T_n(\mathbb{C})
+    $$&lt;/div&gt;
+&lt;p&gt;
+where &lt;span class="math"&gt;\(T_n(\mathbb{C})\)&lt;/span&gt; is the group of invertible upper triangular matrices.  Different QR factorization algorithms choose different principal values, often in an inconsistent way, which is the source of our error.&lt;/p&gt;
+&lt;h2&gt;The Corrected Algorithm&lt;/h2&gt;
+&lt;p&gt;To ensure that the QR decomposition with random input produces a unitary matrix distributed according to the Haar measure, we must choose a variation of the map above which is not only single valued but also one-to-one.  We need the following lemma.  Let &lt;span class="math"&gt;\(\Lambda_n(\mathbb{C})\)&lt;/span&gt; denote the group of unitary diagonal matrices.&lt;/p&gt;
+&lt;!-- Lemma --&gt;
+
+&lt;div class="theorem"&gt;
+&lt;span class="label"&gt;Lemma.&lt;/span&gt;
+Let $Z \in \mathbb{C}^{n \times n}$ have two valid QR decompositions $Z = Q_1 R_1 = Q_2 R_2$.  Then, there is $\Lambda \in \Lambda_n(\mathbb{C})$ such that $Q_2 = Q_2 \Lambda^{-1}$ and $R_2 = \Lambda R_1$.
+&lt;/div&gt;
+
+&lt;p&gt;Consider the quotient group &lt;span class="math"&gt;\(\Gamma_n(\mathbb{C}) = T_n(\mathbb{C}) / \Lambda_n(\mathbb{C})\)&lt;/span&gt;.  Our corrected algorithm will be a one-to-one map
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$
+    \widehat{\mathrm{QR}} : \mathrm{GL}_n(\mathbb{C}) \rightarrow \mathrm{U}_n(\mathbb{C}) \times \Gamma_n(C)
+    $$&lt;/div&gt;
+&lt;p&gt;
+The upper-rectangular matrix returned by the corrected algorithm will be a representative &lt;span class="math"&gt;\(\gamma\)&lt;/span&gt; of &lt;span class="math"&gt;\(\Gamma_n(\mathbb{C})\)&lt;/span&gt;.  If we choose the map &lt;span class="math"&gt;\(\widehat{\mathrm{QR}}\)&lt;/span&gt; to be unitarily invariant with respect to &lt;span class="math"&gt;\(\gamma\)&lt;/span&gt;, that is,
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$
+    Z \mapsto (Q, \gamma) \implies UZ \mapsto (UQ, \gamma) \text{ for all } U \in \mathrm{U}_n(\mathbb{C})
+    $$&lt;/div&gt;
+&lt;p&gt;
+then by Lemma \ref{lemma:gue-invariance}, the algorithm &lt;span class="math"&gt;\(\widehat{\mathrm{QR}}\)&lt;/span&gt; with input from a Gaussian Unitary Ensemble will be distributed according to the Haar measure on &lt;span class="math"&gt;\(U_n(\mathbb{C})\)&lt;/span&gt;.  It can be shown that the unitary invariance property holds when representatives for &lt;span class="math"&gt;\(\Gamma_n(\mathbb{C})\)&lt;/span&gt; are chosen from the set of upper triangular matrices with real, positive entries.  This suggests the following correction to the naive algorithm.  The results are shown on the right in Figure \ref{fig:random-unitary-histogram}.&lt;/p&gt;
+&lt;style&gt;
+.highlight {
+    padding: 10px;
+    background-color: #f5f5f5;
+    border: 1px solid #ccc;
+    margin: 10px 0;
+}
+
+.highlight pre {
+    margin: 0;
+    font-size: 12px;
+}
+&lt;/style&gt;
+
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="k"&gt;def&lt;/span&gt; &lt;span class="nf"&gt;haar_measure&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;n&lt;/span&gt;&lt;span class="p"&gt;):&lt;/span&gt;
+    &lt;span class="c1"&gt;# naive method&lt;/span&gt;
+    &lt;span class="n"&gt;Z&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;randn&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;n&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="n"&gt;n&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;+&lt;/span&gt; &lt;span class="mi"&gt;1&lt;/span&gt;&lt;span class="n"&gt;j&lt;/span&gt;&lt;span class="o"&gt;*&lt;/span&gt;&lt;span class="n"&gt;randn&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;n&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="n"&gt;n&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="n"&gt;np&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;sqrt&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="mi"&gt;2&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="n"&gt;Q&lt;/span&gt;&lt;span class="p"&gt;,&lt;/span&gt;&lt;span class="n"&gt;R&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;np&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;linalg&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;qr&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;Z&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="c1"&gt;# correction&lt;/span&gt;
+    &lt;span class="n"&gt;d&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;np&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;diag&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;R&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="n"&gt;PH&lt;/span&gt; &lt;span class="o"&gt;=&lt;/span&gt; &lt;span class="n"&gt;np&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;diag&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;d&lt;/span&gt;&lt;span class="p"&gt;)&lt;/span&gt; &lt;span class="o"&gt;/&lt;/span&gt; &lt;span class="n"&gt;np&lt;/span&gt;&lt;span class="o"&gt;.&lt;/span&gt;&lt;span class="n"&gt;absolute&lt;/span&gt;&lt;span class="p"&gt;(&lt;/span&gt;&lt;span class="n"&gt;d&lt;/span&gt;&lt;span class="p"&gt;);&lt;/span&gt;
+    &lt;span class="k"&gt;return&lt;/span&gt; &lt;span class="n"&gt;Q&lt;/span&gt; &lt;span class="o"&gt;@&lt;/span&gt; &lt;span class="n"&gt;PH&lt;/span&gt;&lt;span class="p"&gt;;&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;h1&gt;Discussion&lt;/h1&gt;
+&lt;p&gt;We have described several basic results in random matrix theory and developed an algorithm for sampling unitary matrices in a uniform way.  The corrected algorithm in the previous section is a special case of the remarkably general &lt;em&gt;subgroup algorithm&lt;/em&gt; (Diaconis 1987), in which uniform random samples from a group &lt;span class="math"&gt;\(G_n\)&lt;/span&gt; are built up from successive uniform samples from a chain of subgroups &lt;span class="math"&gt;\(G_1 \subset G_2 \subset \cdots G_n\)&lt;/span&gt;.  The Fisher-Yates shuffle is a well-known realization of the subgroup algorithm.  The algorithm is very general, but the main difficulty is generating samples from the quotient groups &lt;span class="math"&gt;\(G_{k} / G_{k-1}\)&lt;/span&gt;.&lt;/p&gt;
+&lt;p&gt;For our specific problem of generating random unitary matrices, we were able to prove that the corrected method produces a result distributed according to Haar measure.  When designing sampling procedures for more complicated structures, this may not be possible, and there has been some work on developing statistical tests on manifolds to determine whether the target distribution has been met (Sepheri 2016).&lt;/p&gt;
+&lt;p&gt;I am aware that Lie groups are commonly used in motion planning; the valid orientations of a robot or vehicle form a manifold in configuration space, and there is a group of transformations which describe the allowed behavior.  I strongly suspect that the strategies used in this report could be used to randomly sample valid configurations, which could be useful in simulation or gaming applications.&lt;/p&gt;</content></entry><entry><title>Collision Detection with the Separating Axis Theorem</title><link href="http://benrbray.com/posts/2017/collision-detection-with-the-separating-axis-theorem" rel="alternate"></link><published>2017-06-17T00:00:00-04:00</published><updated>2017-06-17T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2017-06-17:/posts/2017/collision-detection-with-the-separating-axis-theorem</id><content type="html">&lt;p&gt;In geometry, the hyperplane separation theorem is a theorem about disjoint convex sets in n-dimensional Euclidean space. There are several rather similar versions. In one version of the theorem, if both these sets are closed and at least one of them is compact, then there is a hyperplane in between them and even two parallel hyperplanes in between them separated by a gap. In another version, if both disjoint convex sets are open, then there is a hyperplane in between them, but not necessarily any gap. An axis which is orthogonal to a separating hyperplane is a separating axis, because the orthogonal projections of the convex bodies onto the axis are disjoint.&lt;/p&gt;</content></entry><entry><title>Generating Random Samples</title><link href="http://benrbray.com/posts/2017/generating-random-samples" rel="alternate"></link><published>2017-06-17T00:00:00-04:00</published><updated>2017-06-17T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2017-06-17:/posts/2017/generating-random-samples</id><content type="html">&lt;p&gt;What is the most effective way to generate random samples, assuming we have access to a pseudorandom number generator?  In this post, we'll explore several common algorithms.&lt;/p&gt;</content></entry><entry><title>Digital Humanities &amp; German Periodicals</title><link href="http://benrbray.com/posts/2016/digital-humanities-german-periodicals" rel="alternate"></link><published>2016-12-01T00:00:00-05:00</published><updated>2016-12-01T00:00:00-05:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2016-12-01:/posts/2016/digital-humanities-german-periodicals</id><summary type="html">&lt;p&gt;As an undergraduate research assistant, I spent three years as the primary developer for an NLP-driven web application built to assist a humanities professor with his research on 19th-century German literature.  The application allowed him to run statistical topic models (LDA, HDP, dynamic topic models, etc.) on a large corpus of text, and displayed helpful visualizations of the results.  The application was built using Python / Flask / Bootstrap and also supported toponym detection and full-text search.&lt;/p&gt;</summary><content type="html">&lt;h1&gt;Overview&lt;/h1&gt;
+&lt;p&gt;As an undergraduate research assistant, I spent three years as the primary developer for an NLP-driven web application built to assist a humanities professor (&lt;a href="https://lsa.umich.edu/german/people/faculty/pmcisaac.html"&gt;Dr. Peter McIsaac&lt;/a&gt;, University of Michigan) with his research on 19th-century German literature.  The application allowed him to run statistical topic models (&lt;a href="http://jmlr.org/papers/volume3/blei03a/blei03a.pdf"&gt;LDA&lt;/a&gt;, &lt;a href="http://proceedings.mlr.press/v15/wang11a/wang11a.pdf"&gt;HDP&lt;/a&gt;, &lt;a href="https://mimno.infosci.cornell.edu/info6150/readings/dynamic_topic_models.pdf"&gt;DTM&lt;/a&gt;, etc.) on a large corpus of text and displayed helpful visualizations of the results.  The application was built using &lt;strong&gt;Python&lt;/strong&gt; / &lt;strong&gt;Flask&lt;/strong&gt; / &lt;strong&gt;Bootstrap&lt;/strong&gt; and also supported toponym detection and full-text search.  We used &lt;a href="https://radimrehurek.com/gensim/"&gt;&lt;code&gt;gensim&lt;/code&gt;&lt;/a&gt; for topic modeling.&lt;/p&gt;
+&lt;p&gt;Using the web application I built, my supervisor was able to effectively detect cultural and historical trends in a large corpus of previously unstudied documents&lt;span class="aside"&gt;This is a cheeky remark!&lt;/span&gt;.  Our efforts led to a number of publications in humanities journals and conferences, including &lt;a href="http://www.jstor.org/stable/10.7722/j.ctt5vj848.11"&gt;[McIsaac 2014]&lt;/a&gt;:&lt;/p&gt;
+&lt;blockquote class="citation"&gt;
+McIsaac, Peter M. &lt;a href="http://www.jstor.org/stable/10.7722/j.ctt5vj848.11"&gt;“Rethinking Nonfiction: Distant Reading the Nineteenth-Century Science-Literature Divide.”&lt;/a&gt; &lt;i&gt;Distant Readings: Topologies of German Culture in the Long Nineteenth Century&lt;/i&gt;, edited by Matt Erlin and Lynne Tatlock, ed., Boydell and Brewer, 2014, pp. 185–208.
+&lt;/blockquote&gt;
+
+&lt;h2&gt;Motivation&lt;/h2&gt;
+&lt;p&gt;Our analysis focused on a corpus of widely-circulated periodicals, published in Germany during the 19th-century around the time of the administrative &lt;a href="https://en.wikipedia.org/wiki/Unification_of_Germany"&gt;unification&lt;/a&gt; of Germany in 1871.  Through &lt;a href="https://www.hathitrust.org/"&gt;HathiTrust&lt;/a&gt; and partnerships with university libraries, we obtained digital scans of the following periodicals:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;em&gt;Deutsche Rundschau&lt;/em&gt; (1874-1964)&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;Westermann's Illustrirte Monatshefte&lt;/em&gt; (1856-1987)&lt;/li&gt;
+&lt;li&gt;&lt;em&gt;Die Gartenlaube&lt;/em&gt; (1853-1944)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;These periodicals, published weekly or monthly, were among Germany's most widely-read print material in the latter half of the nineteenth century, and served as precursors &lt;span class="aside"&gt;This is a longer remark that provides more detail about something in the main article.&lt;/span&gt;to the modern magazine.  Scholars have long recognized the cultural significance of these publications (c.f. &lt;a href="https://books.google.com/books?hl=en&amp;amp;lr=&amp;amp;id=yGHo-Alkp84C&amp;amp;oi=fnd&amp;amp;pg=PR9&amp;amp;dq=belgum+2002+popularizing+the+nation+Audience,+Representation,+and+the+Production+of+Identity+in+Die+Gartenlaube&amp;amp;ots=VFwEvxdUUS&amp;amp;sig=kF6W0ktdb6BOcD1TY7Rdwtf_tsc#v=onepage&amp;amp;q&amp;amp;f=false"&gt;[Belgum 2002]&lt;/a&gt;), but their enormous volume had so far precluded comprehensive study.&lt;/p&gt;
+&lt;figure&gt;
+    &lt;div class="img-gallery horizontal"&gt;
+        &lt;img src="/images/dhgp/westermanns-cover.jpg"&gt;
+        &lt;img src="/images/dhgp/gartenlaube.jpg"&gt;
+    &lt;/div&gt;
+    &lt;figcaption&gt;Cover of &lt;cite&gt;Westermann's Monatshefte&lt;/cite&gt; and front page of &lt;cite&gt;Die Gartenlaube&lt;/cite&gt;.  Courtesy of HathiTrust.&lt;/figcaption&gt;
+&lt;/figure&gt;
+
+&lt;p&gt;Using statistical methods, including &lt;a href="http://journalofdigitalhumanities.org/2-1/topic-modeling-a-basic-introduction-by-megan-r-brett/"&gt;topic models&lt;/a&gt;, we aimed to study the development of a German national identity following the 1848 revolutions, through the 1871 unification, and leading up to the world wars of the twentieth century.  This approach is commonly referred to as &lt;strong&gt;digital humanities&lt;/strong&gt; or &lt;strong&gt;distant reading&lt;/strong&gt; (in contrast to &lt;a href="https://en.wikipedia.org/wiki/Close_reading"&gt;close reading&lt;/a&gt;).&lt;/p&gt;
+&lt;h2&gt;Preprocessing&lt;/h2&gt;
+&lt;p&gt;Initially, we only had access to digital scans of books printed in a difficult-to-read blackletter font.  In order to convert our scanned images to text, I used &lt;a href="https://github.com/tesseract-ocr"&gt;Google Tesseract&lt;/a&gt; to train a custom optical character recognition (OCR) model specialized to fonts from our corpus.  Tesseract performed quite well, but our scans exhibited a number of characteristics that introduced errors into the OCR process:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Poor scan quality (causing speckles, erosion, dilation, etc.)&lt;/li&gt;
+&lt;li&gt;Orthographic differences from modern German, including ligatures and the &lt;a href="https://en.wikipedia.org/wiki/Long_s"&gt;long s&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Inconsistent layouts (floating images, multiple columns per page, etc.)&lt;/li&gt;
+&lt;li&gt;Blackletter fonts which are difficult to read, even for humans&lt;/li&gt;
+&lt;li&gt;The use of fonts such as Antiqua for dates and foreign words&lt;/li&gt;
+&lt;li&gt;Headers, footers, page numbers, illustrations, and hyphenation&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The examples below highlight some of the challenges we faced during the OCR phase.&lt;/p&gt;
+&lt;figure role="group"&gt;
+    &lt;div class="img-gallery large"&gt;
+        &lt;figure class="img-col-2" &gt;
+            &lt;img src="/images/dhgp/deutsche-rundschau-wikipedia.jpg"&gt;
+            &lt;figcaption&gt;From &lt;cite&gt;Deutsche Rundschau&lt;/cite&gt;, courtesy of &lt;a href="https://www.hathitrust.org/"&gt;HathiTrust&lt;/a&gt;.&lt;/figcaption&gt;
+        &lt;/figure&gt;
+        &lt;figure&gt;
+            &lt;img src="/images/dhgp/fraktur-antiqua-wiki.jpg"&gt;
+            &lt;figcaption&gt;Wikipedia, &lt;a href="https://en.wikipedia.org/wiki/Antiqua%E2%80%93Fraktur_dispute"&gt;Antiqua-Fraktur Dispute&lt;/a&gt;&lt;/figcaption&gt;
+        &lt;/figure&gt;
+        &lt;figure&gt;
+            &lt;img src="/images/dhgp/gartenlaube-1.jpg"&gt;
+            &lt;figcaption&gt;From &lt;cite&gt;Die Gartenlaube&lt;/cite&gt;, courtesy of &lt;a href="https://www.hathitrust.org/"&gt;HathiTrust&lt;/a&gt;.&lt;/figcaption&gt;
+        &lt;/figure&gt;
+    &lt;/div&gt;
+&lt;/figure&gt;
+
+&lt;p&gt;As a result, significant pre- and post-processing of OCR results was necessary.  We combined a number of approaches in order to reduce the error rate to an acceptable level:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;I used &lt;a href="https://processing.org/"&gt;Processing&lt;/a&gt; to remove noise and other scanning artifacts from our images.&lt;/li&gt;
+&lt;li&gt;I wrote code to automatically remove running headers, text decorations, and page numbers.&lt;/li&gt;
+&lt;li&gt;Through manual inspection of a small number of documents, we compiled a list of common OCR mistakes.  I developed scripts to automatically propagate these corrections across the entire corpus.&lt;/li&gt;
+&lt;li&gt;I experimented with several custom OCR-correction schemes to correct as many mistakes as possible and highlight ambiguities.  Our most successful approach used a &lt;a href="https://en.wikipedia.org/wiki/Hidden_Markov_model"&gt;Hidden Markov Model&lt;/a&gt; to correct sequences of word fragments.  Words were segmented using &lt;a href="https://www.sciencedirect.com/science/article/pii/0020027174900448"&gt;Letter Successor Entropy&lt;/a&gt;.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;With these improvements, we found that our digitized texts were good enough for the type of exploratory analysis we had in mind.  By evaluating our OCR pipeline on a synthetic dataset of "fake" scans with known text and a configurable amount of noise (speckles, erosion, dilation, etc.), we found that our OCR correction efforts improved accuracy from around 80% to 95% or higher.&lt;/p&gt;
+&lt;h2&gt;Topic Modeling&lt;/h2&gt;
+&lt;p&gt;In natural language processing, &lt;b&gt;topic modeling&lt;/b&gt; is a form of statistical analysis used to help index and explore large collections of text documents.  The output of a topic model typically includes:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;A list of &lt;b&gt;topics&lt;/b&gt;, each represened by a list of related words.  Each word may also have an associated weight, indicating how strongly a word relates to this topic.  For example:&lt;ul&gt;
+&lt;li&gt;(Topic 1) &lt;i&gt;sport, team, coach, ball, coach, team, race, bat, run, swim...&lt;/i&gt;&lt;/li&gt;
+&lt;li&gt;(Topic 2) &lt;i&gt;country, government, official, governor, tax, approve, law...&lt;/i&gt;&lt;/li&gt;
+&lt;li&gt;(Topic 3) &lt;i&gt;train, bus, passenger, traffic, bicycle, pedestrian...&lt;/i&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;A &lt;b&gt;topic probability vector&lt;/b&gt; for each document, representing the importance of each topic to this document.  For example, a document about the Olympics may be 70% sports, 20% government, and 10% transportation.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;The most popular topic model is &lt;a href="https://en.wikipedia.org/wiki/Latent_Dirichlet_allocation"&gt;Latent Dirichlet Allocation (LDA)&lt;/a&gt;, which is succinctly described by the following probabilistic graphical model.  There are &lt;span class="math"&gt;\(T\)&lt;/span&gt; topics, &lt;span class="math"&gt;\(M\)&lt;/span&gt; documents, &lt;span class="math"&gt;\(N\)&lt;/span&gt; words per document, and &lt;span class="math"&gt;\(V\)&lt;/span&gt; words in the vocabulary.&lt;/p&gt;
+&lt;figure&gt;
+    &lt;div class="img-gallery horizontal" style="align-items: center"&gt;
+        &lt;!-- Graphical Model --&gt;
+        &lt;img src="/images/dhgp/pgm-lda.png"&gt;
+        &lt;!-- Distributions --&gt;
+        &lt;div style="font-size: 0.8em"&gt;
+        $$\begin{aligned}
+        \text{hyperparameters}  &amp;&amp;&amp; \alpha \in \mathbb{R}^{T}, \eta \in \mathbb{R}^{V}\\
+        \text{topics}           &amp;&amp; \beta_t \mid \eta &amp; \stackrel{iid}{\sim} \mathrm{Dirichlet}(\eta)          \\
+        \text{topic mixtures}   &amp;&amp; \theta_m \mid \alpha  &amp;\stackrel{iid}{\sim} \mathrm{Dirichlet}(\alpha)           \\
+        \text{topic indicators} &amp;&amp; z_{mn} \mid \theta_m  &amp;\stackrel{iid}{\sim} \mathrm{Categorical}(\theta_m)       \\
+        \text{word indicators}  &amp;&amp; w_{mn} \mid z_{mn}    &amp;\stackrel{iid}{\sim} \mathrm{Categorical}(\beta_{z_{mn}})
+        \end{aligned}$$
+        &lt;/div&gt;
+    &lt;/div&gt;
+&lt;/figure&gt;
+
+&lt;p&gt;Each topic &lt;span class="math"&gt;\(t\)&lt;/span&gt; is represented by a probability distribution &lt;span class="math"&gt;\(\beta_t\)&lt;/span&gt; over the vocabulary, indicating how likely each word is to appear under topic &lt;span class="math"&gt;\(t\)&lt;/span&gt;.  LDA posits that documents are written using the following &lt;b&gt;generative process&lt;/b&gt;:&lt;/p&gt;
+&lt;ol&gt;
+&lt;li&gt;For each document &lt;span class="math"&gt;\(d_{m}\)&lt;/span&gt;,&lt;ol&gt;
+&lt;li&gt;Decide in what proportions &lt;span class="math"&gt;\(\theta_m = (\theta_{m1},\dots,\theta_{mt})\)&lt;/span&gt; each topic will appear.&lt;/li&gt;
+&lt;li&gt;To choose each each word &lt;span class="math"&gt;\(w_{mn}\)&lt;/span&gt;,&lt;ol&gt;
+&lt;li&gt;According to &lt;span class="math"&gt;\(\theta_m\)&lt;/span&gt;, randomly decide which topic to use for this word.&lt;/li&gt;
+&lt;li&gt;Randomly sample a word according to the chosen topic.&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;/li&gt;
+&lt;/ol&gt;
+&lt;p&gt;Of course, this is not how humans actually write.  LDA represents documents as &lt;b&gt;bags-of-words&lt;/b&gt;, ignoring word order and sentence structure.  When topic models are used to index or explore large corpora, as was our goal, this is an acceptable compromise.  Given a collection of documents, LDA attempts to "invert" the generative process by computing a &lt;a href="https://en.wikipedia.org/wiki/Maximum_likelihood_estimation"&gt;maximum likelihood estimate&lt;/a&gt; of the topics &lt;span class="math"&gt;\(\beta_t\)&lt;/span&gt; and topic mixtures &lt;span class="math"&gt;\(\theta_m\)&lt;/span&gt;.  These estimates are typically computed using &lt;b&gt;variational expectation-maximziation&lt;/b&gt;.&lt;/p&gt;
+&lt;h2&gt;DHGP Browser&lt;/h2&gt;
+&lt;p&gt;Using &lt;strong&gt;Python / Flask / Bootstrap&lt;/strong&gt;, I built a web application enabling humanities researchers to train, visualize, and save topic models.  Features:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Support for several popular topic models:&lt;ul&gt;
+&lt;li&gt;Online Latent Dirichlet Allocation (via &lt;code&gt;gensim&lt;/code&gt;)&lt;/li&gt;
+&lt;li&gt;Online Hierarchical Dirichlet Process (via &lt;code&gt;gensim&lt;/code&gt;)&lt;/li&gt;
+&lt;li&gt;Dynamic Topic Models (custom implementation based &lt;a href="https://mimno.infosci.cornell.edu/info6150/readings/dynamic_topic_models.pdf"&gt;[Blei 2006]&lt;/a&gt;)&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;&lt;a href="https://en.wikipedia.org/wiki/Toponym_resolution"&gt;Toponym Resolution&lt;/a&gt; for identifying and mapping place names mentioned in our texts &lt;/li&gt;
+&lt;li&gt;Full-text / metadata search using &lt;a href="www.elastic.co"&gt;ElasticSearch&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Support for any corpus with metadata saved in JSON format.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;I no longer have access to the most up-to-date version of &lt;code&gt;dhgp-browser&lt;/code&gt;, but here are some screenshots from mid-2015:&lt;/p&gt;
+&lt;figure&gt;
+    &lt;div class="img-gallery col-2"&gt;
+        &lt;figure&gt;
+            &lt;img src="/images/dhgp/dhgp-browser-3.png"&gt;
+            &lt;figcaption&gt;Topic View&lt;/figcaption&gt;
+        &lt;/figure&gt;
+        &lt;figure&gt;
+            &lt;img src="/images/dhgp/dhgp-browser-2.png"&gt;
+            &lt;figcaption&gt;Topic Listing&lt;/figcaption&gt;
+        &lt;/figure&gt;
+        &lt;figure&gt;
+            &lt;img src="/images/dhgp/dhgp-browser-1.png"&gt;
+            &lt;figcaption&gt;Corpus View&lt;/figcaption&gt;
+        &lt;/figure&gt;
+        &lt;figure&gt;
+            &lt;img src="/images/dhgp/dhgp-browser-4.png"&gt;
+            &lt;figcaption&gt;Document Graph&lt;/figcaption&gt;
+        &lt;/figure&gt;
+    &lt;/div&gt;
+&lt;/figure&gt;
+
+&lt;h1&gt;Miscellaneous&lt;/h1&gt;
+&lt;h2&gt;UROP Symposium Poster&lt;/h2&gt;
+&lt;p&gt;The poster below summarizes the progress made during my first year on the project, which I initially joined through the &lt;a href="https://lsa.umich.edu/urop"&gt;UROP Program&lt;/a&gt; at UM.  After my first year, I was hired to continue working on the project as an undergraduate research assistant.&lt;/p&gt;
+&lt;p&gt;&lt;a href="/static/dhgp/dhgp_urop-poster_benrbray.pdf"&gt;
+&lt;img src="/images/dhgp/dhgp-poster.png"&gt;&lt;/img&gt;
+&lt;/a&gt;&lt;/p&gt;
+&lt;h1&gt;References&lt;/h1&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;[McIsaac 2014]&lt;/strong&gt; McIsaac, Peter M. &lt;a href="http://www.jstor.org/stable/10.7722/j.ctt5vj848.11"&gt;“Rethinking Nonfiction: Distant Reading the Nineteenth-Century Science-Literature Divide.”&lt;/a&gt; &lt;em&gt;Distant Readings: Topologies of German Culture in the Long Nineteenth Century&lt;/em&gt;, edited by Matt Erlin and Lynne Tatlock, ed., Boydell and Brewer, 2014, pp. 185–208.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;[Belgum 2002]&lt;/strong&gt; Belgum, Kirsten. &lt;a href="https://books.google.com/books?hl=en&amp;amp;lr=&amp;amp;id=yGHo-Alkp84C&amp;amp;oi=fnd&amp;amp;pg=PR9&amp;amp;dq=belgum+2002+popularizing+the+nation+Audience,+Representation,+and+the+Production+of+Identity+in+Die+Gartenlaube&amp;amp;ots=VFwEvxdUUS&amp;amp;sig=kF6W0ktdb6BOcD1TY7Rdwtf_tsc#v=onepage&amp;amp;q&amp;amp;f=false"&gt;Popularizing the Nation: Audience, Representation, and the Production of Identity in Die Gartenlaube&lt;/a&gt;, 1853-1900. U of Nebraska Press, 1998.&lt;/li&gt;
+&lt;/ul&gt;</content><category term="nlp"></category><category term="topic-models"></category><category term="machine-learning"></category><category term="web-dev"></category></entry><entry><title>Rigid Body Dynamics</title><link href="http://benrbray.com/posts/2016/rigid-body-dynamics" rel="alternate"></link><published>2016-12-01T00:00:00-05:00</published><updated>2016-12-01T00:00:00-05:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2016-12-01:/posts/2016/rigid-body-dynamics</id><summary type="html">&lt;p&gt;Fast and accurate rigid body dynamics for games!&lt;/p&gt;</summary><content type="html"></content><category term="linear-algebra"></category><category term="game-dev"></category></entry><entry><title>Expectation Maximization</title><link href="http://benrbray.com/posts/2015/expectation-maximization" rel="alternate"></link><published>2015-11-26T00:00:00-05:00</published><updated>2015-11-26T00:00:00-05:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2015-11-26:/posts/2015/expectation-maximization</id><summary type="html">&lt;p&gt;These notes provide a theoretical treatment of &lt;strong&gt;Expectation-Maximization&lt;/strong&gt;, an iterative parameter estimation algorithm used to find local maxima of the likelihood function in the presence of hidden variables.  Introductory textbooks (MLAPP, PRML) typically state the algorithm without explanation and expect students to work blindly through derivations.  We find this approach to be unsatisfying, and instead choose to tackle the theory head-on, followed by plenty of examples.  Following (Neal &amp;amp; Hinton 1998), we view expectation-maximization as coordinate ascent on the &lt;strong&gt;Evidence Lower Bound&lt;/strong&gt;.  This perspective takes much of the mystery out of the algorithm and allows us to easily derive variants like &lt;strong&gt;Hard EM&lt;/strong&gt; and &lt;strong&gt;Variational Inference&lt;/strong&gt;.&lt;/p&gt;</summary><content type="html">&lt;style&gt;
+.post-framed {
+    border: 1px solid black;
+    padding: 20px;
+}
+
+.post-framed h3:nth-child(1) {
+    margin-top: 0;
+}
+
+.post-remark {
+    background-color: #eee;
+}
+&lt;/style&gt;
+
+&lt;h1&gt;Introduction&lt;/h1&gt;
+&lt;p&gt;These notes provide a theoretical treatment of &lt;strong&gt;Expectation Maximization&lt;/strong&gt;, an iterative parameter estimation algorithm used to find local maxima of the likelihood function in the presence of hidden variables.  Introductory textbooks [murphy:mlapp, bishop:prml] typically state the algorithm without explanation and expect students to work blindly through derivations.  We find this approach to be unsatisfying, and instead choose to tackle the theory head-on, followed by plenty of examples.  Following [neal1998:em], we view expectation-maximization as coordinate ascent on the &lt;strong&gt;Evidence Lower Bound&lt;/strong&gt;.  This perspective takes much of the mystery out of the algorithm and allows us to easily derive variants like &lt;strong&gt;Hard EM&lt;/strong&gt; and &lt;strong&gt;Variational EM&lt;/strong&gt;.&lt;/p&gt;
+&lt;h1&gt;Problem Setting&lt;/h1&gt;
+&lt;p&gt;Suppose we observe data &lt;span class="math"&gt;\(\X\)&lt;/span&gt; generated from a model &lt;span class="math"&gt;\(p\)&lt;/span&gt; with true parameters &lt;span class="math"&gt;\(\theta^*\)&lt;/span&gt; in the presence of hidden variables &lt;span class="math"&gt;\(Z\)&lt;/span&gt;.  As usual, we wish to compute the maximum likelihood estimate
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$
+    \hat\theta_{ML}
+    = \arg\max_\theta \ell(\theta|\X)
+    = \arg\max_\theta \log p(\X | \theta)
+    $$&lt;/div&gt;
+&lt;p&gt;of the parameters given our observed data.  In some cases, we also seek to &lt;em&gt;infer&lt;/em&gt; the values &lt;span class="math"&gt;\(\mathcal{Z}\)&lt;/span&gt; of the hidden variables &lt;span class="math"&gt;\(Z\)&lt;/span&gt;.  In the Bayesian spirit, we will treat the parameter &lt;span class="math"&gt;\(\theta^*\)&lt;/span&gt; as a realization of some random variable &lt;span class="math"&gt;\(\Theta\)&lt;/span&gt;.&lt;/p&gt;
+&lt;p&gt;The observed data log-likelihood &lt;span class="math"&gt;\(\ell(\theta|\X) = \log p(\X | \theta)\)&lt;/span&gt; of the parameters given the observed data is useful for both inference and parameter estimation, in which we must grapple with uncertainty about the hidden variables.  Working directly with this quantity is often difficult in latent variable models because the inner sum cannot be brought out of the logarithm when we marginalize over the latent variables:
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$
+    \ell(\theta|\X)
+    = \log p(\X | \theta)
+    = \log \sum_z p(\X, z | \theta)
+    $$&lt;/div&gt;
+&lt;p&gt;
+In general, this likelihood is non-convex with many local maxima.  In contrast, [murphy:mlapp] shows that when &lt;span class="math"&gt;\(p(x_n, z_n | \theta)\)&lt;/span&gt; are exponential family distributions, the likelihood is convex, so learning is much easier.  Expectation maximization exploits the fact that learning is easy when we observe all variables.  We will alternate between inferring the values of the latent variables and re-estimating the parameters, assuming we have complete data.&lt;/p&gt;
+&lt;h1&gt;Evidence Lower Bound&lt;/h1&gt;
+&lt;p&gt;Our general approach will be to reason about the hidden variables through a proxy distribution &lt;span class="math"&gt;\(q\)&lt;/span&gt;, which we use to compute a lower-bound on the log-likelihood.  This section is devoted to deriving one such bound, called the &lt;strong&gt;Evidence Lower Bound (ELBO)&lt;/strong&gt;.&lt;/p&gt;
+&lt;p&gt;We can expand the data log-likelihood by marginalizing over the hidden variables:
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$
+    \ell(\theta|\X)
+    = \log p(\X|\theta)
+    = \log \sum_z p(\X, z | \theta)
+    $$&lt;/div&gt;
+&lt;p&gt;Through Jensen's inequality, we obtain the following bound, valid for any &lt;span class="math"&gt;\(q\)&lt;/span&gt;:
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$\begin{aligned}
+    \ell(\theta|\X)
+    &amp;amp;=    \log \sum_z p(\X, z | \theta) \\
+    &amp;amp;=    \log \sum_z q(z) \frac{p(\X, z | \theta)}{q(z)} \\
+    &amp;amp;\geq \sum_z q(z) \log \frac{p(\X, z | \theta)}{q(z)}
+    \equiv \mathcal{L}(q,\theta)
+    \end{aligned}$$&lt;/div&gt;
+&lt;p&gt;The lower bound &lt;span class="math"&gt;\(\mathcal{L}(q,\theta)\)&lt;/span&gt; can be rewritten as follows:
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$\begin{aligned}
+    \ell(\theta|\X)
+    \geq \mathcal{L}(q,\theta)
+    &amp;amp;= \sum_z q(z) \log \frac{p(\X, z | \theta)}{q(z)} \\
+    &amp;amp;= \sum_z q(z) \log p(\X, z | \theta)
+      -\sum_z q(z) \log q(z) \\
+    &amp;amp;= E_q[ \log p(\X, Z | \theta)]
+      -E_q[ \log q(z) ] \\
+    &amp;amp;= E_q[ \log p(\X, Z | \theta)]
+      + H(q)
+    \end{aligned}$$&lt;/div&gt;
+&lt;h2&gt;Relationship to Relative Entropy&lt;/h2&gt;
+&lt;p&gt;The first term in the last line above closely resembles the cross entropy between &lt;span class="math"&gt;\(q(Z)\)&lt;/span&gt; and the joint distribution &lt;span class="math"&gt;\(p(X, Z)\)&lt;/span&gt; of the observed and hidden variables.  However, the variables &lt;span class="math"&gt;\(X\)&lt;/span&gt; are fixed to our observations &lt;span class="math"&gt;\(X=\X\)&lt;/span&gt; and so &lt;span class="math"&gt;\(p(\X,Z)\)&lt;/span&gt; is an &lt;em&gt;unnormalized&lt;/em&gt; [ref]In this case, &lt;span class="math"&gt;\(\int p(\X, z)\, dz \neq 1\)&lt;/span&gt;.[/ref] distribution over &lt;span class="math"&gt;\(Z\)&lt;/span&gt;.  It is easy to see that this does not set us back too far; in fact, the lower bound &lt;span class="math"&gt;\(\mathcal{L}(q,\theta)\)&lt;/span&gt; differs from a Kullback-Liebler divergence only by a constant with respect to &lt;span class="math"&gt;\(Z\)&lt;/span&gt;:
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$\begin{aligned}
+    D_{KL}(q || p(Z|\X,\theta))
+    &amp;amp;= H(q, p(Z|\X,\theta)) - H(q) \\
+    &amp;amp;= E_q[ -\log p(Z|\X,\theta) ] - H(q) \\
+    &amp;amp;= E_q[ -\log p(\X,Z | \theta) ] - E_q[ -\log p(\X|\theta) ] - H(q) \\
+    &amp;amp;= E_q[ -\log p(\X,Z | \theta) ] + \log p(\X|\theta) - H(q) \\
+    &amp;amp;= -\mathcal{L}(q,\theta) + \mathrm{const.}
+    \end{aligned}$$&lt;/div&gt;
+&lt;p&gt;This yields a second proof of the evidence lower bound, following from the nonnegativity of relative entropy.  In fact, this is the proof given in [tzikas2008:variational] and [murphy:mlapp].
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$
+    \log p(\X | \theta)
+    = D_{KL}(q || p(Z|\X, \theta)) + \mathcal{L}(q,\theta)
+    \geq \mathcal{L}(q,\theta)
+    $$&lt;/div&gt;
+&lt;h2&gt;Selecting a Proxy Distribution&lt;/h2&gt;
+&lt;p&gt;The quality of our lower bound &lt;span class="math"&gt;\(\mathcal{L}(q,\theta)\)&lt;/span&gt; depends heavily on the choice of proxy distribution &lt;span class="math"&gt;\(q(Z)\)&lt;/span&gt;.  We now show that the evidence lower bound is &lt;em&gt;tight&lt;/em&gt; in the sense that equality holds when the proxy distribution &lt;span class="math"&gt;\(q(Z)\)&lt;/span&gt; is chosen to be the hidden posterior &lt;span class="math"&gt;\(p(Z|\X,\theta)\)&lt;/span&gt;.  This will be useful later for proving that the Expectation Maximization algorithm converges.&lt;/p&gt;
+&lt;div class="post-remark"&gt;
+Maximizing $\mathcal{L}(q,\theta)$ with respect to $q$ is equivalent to minimizing the relative entropy between $q$ and the hidden posterior $p(Z|\X,\theta)$.  Hence, the optimal choice for $q$ is exactly the hidden posterior, for which $D_{KL}(q || p(Z|\X,\theta)) = 0$, and
+    $$
+    \log p(\X | \theta) = E_q[ \log p(\X,Z | \theta) ] + H(q) = \mathcal{L}(q,\theta)
+    $$
+&lt;/div&gt;
+
+&lt;p&gt;In cases where the hidden posterior is intractable to compute, we choo&lt;/p&gt;
+&lt;h1&gt;Expectation Maximization&lt;/h1&gt;
+&lt;p&gt;Recall that the maximum likelihood estimate of the parameters &lt;span class="math"&gt;\(\theta\)&lt;/span&gt; given observed data &lt;span class="math"&gt;\(\X\)&lt;/span&gt; in the presence of hidden variables &lt;span class="math"&gt;\(Z\)&lt;/span&gt; is
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$
+    \hat\theta_{ML}
+    = \arg\max_\theta \ell(\theta|\X)
+    = \arg\max_\theta \log p(\X | \theta)
+    $$&lt;/div&gt;
+&lt;p&gt;Unfortunately, when reasoning about hidden variables, finding a global maximum is difficult.  Instead, the &lt;strong&gt;Expectation Maximization&lt;/strong&gt; algorithm is an iterative procedure for computing a local maximum of the likelihood function, under the assumption that the hidden posterior &lt;span class="math"&gt;\(p(Z|\X,\theta)\)&lt;/span&gt; is tractable.  We will take advantage of the evidence lower bound
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$
+    \ell(\theta|\X) \geq \mathcal{L}(q,\theta)
+    $$&lt;/div&gt;
+&lt;p&gt;on the data likelihood.  Consider only proxy distributions of the form &lt;span class="math"&gt;\(q_\vartheta(Z) = p(Z|\X,\vartheta)\)&lt;/span&gt;, where &lt;span class="math"&gt;\(\vartheta\)&lt;/span&gt; is some fixed configuration of the variables &lt;span class="math"&gt;\(\Theta\)&lt;/span&gt;, possibly different from our estimate &lt;span class="math"&gt;\(\theta\)&lt;/span&gt;.  The optimal value for &lt;span class="math"&gt;\(\vartheta\)&lt;/span&gt;, in the sense that &lt;span class="math"&gt;\(\mathcal{L}(q_\vartheta, \theta)\)&lt;/span&gt; is maximum, depends on the particular choice of &lt;span class="math"&gt;\(\theta\)&lt;/span&gt;.  Similarly, the optimal value for &lt;span class="math"&gt;\(\theta\)&lt;/span&gt; depends on the choice of &lt;span class="math"&gt;\(\vartheta\)&lt;/span&gt;.  This suggests an iterative scheme in which we alternate between maximizing with respect to &lt;span class="math"&gt;\(\vartheta\)&lt;/span&gt; and with respect to &lt;span class="math"&gt;\(\theta\)&lt;/span&gt;, gradually improving the log-likelihood.&lt;/p&gt;
+&lt;h2&gt;Iterative Procedure&lt;/h2&gt;
+&lt;p&gt;Suppose at time &lt;span class="math"&gt;\(t\)&lt;/span&gt; we have an estimate &lt;span class="math"&gt;\(\theta_t\)&lt;/span&gt; of the parameters.  To improve our estimate, we perform two steps of coordinate ascent on &lt;span class="math"&gt;\(\L(\vartheta, \theta) \equiv \L(q_\vartheta, \theta)\)&lt;/span&gt;, as described in [neal1998:em],&lt;/p&gt;
+&lt;div class="post-framed"&gt;
+    &lt;h3&gt;E-Step&lt;/h3&gt;
+    Compute a new lower bound on the observed log-likelihood, with
+        $$
+        \vartheta_{t+1}
+        = \arg\max_\vartheta \mathcal{L}(\vartheta, \theta_t)
+        = \theta_t
+        $$
+
+    &lt;h3&gt;M-Step&lt;/h3&gt;
+    Estimate new parameters by optimizing over the lower bound,
+    $$
+    \theta_{t+1}
+    = \arg\max_\theta \mathcal{L}(\vartheta_{t+1}, \theta)
+    = \arg\max_\theta E_q[ \log p(\X,Z|\theta) ]
+    $$
+&lt;/div&gt;
+
+&lt;p&gt;In the M-Step, the expectation is taken with respect to &lt;span class="math"&gt;\(q_{\vartheta_{t+1}}\)&lt;/span&gt;.&lt;/p&gt;
+&lt;h3&gt;Alternate Formulation&lt;/h3&gt;
+&lt;p&gt;In the M-Step, the entropy term of the evidence lower bound &lt;span class="math"&gt;\(\mathcal{L}(\vartheta_{t+1}, \theta)\)&lt;/span&gt; does not depend on &lt;span class="math"&gt;\(\theta\)&lt;/span&gt;.  The remaining term &lt;span class="math"&gt;\(Q(\theta_t, \theta)=E_q[\log p(\X,Z|\theta)]\)&lt;/span&gt; is sometimes called the &lt;strong&gt;auxiliary function&lt;/strong&gt; or &lt;strong&gt;Q-function&lt;/strong&gt;.  To us, this is the &lt;strong&gt;expected complete-data log-likelihood&lt;/strong&gt;.&lt;/p&gt;
+&lt;h2&gt;Proof of Convergence&lt;/h2&gt;
+&lt;p&gt;To prove convergence of this algorithm, we show that the data likelihood &lt;span class="math"&gt;\(\ell(\theta|\X)\)&lt;/span&gt; increases after each update.&lt;/p&gt;
+&lt;!-- Theorem:  Data likelihood increases with each update --&gt;
+
+&lt;div class="theorem"&gt;
+&lt;span class="label"&gt;Theorem.&lt;/span&gt; After a single iteration of Expectation Maximization, the observed data likelihood of the estimated parameters has not decreased, that is,
+    $$
+    \ell(\theta_t | \X) \leq \ell(\theta_{t+1} | \X)
+    $$
+&lt;/div&gt;
+
+&lt;p&gt;This result is a simple consequence of all the hard work we have put in so far:&lt;/p&gt;
+&lt;div class="math"&gt;$$\begin{aligned}
+\ell(\theta_t | \X)
+&amp;amp;= \mathcal{L}(q_{\vartheta_{t+1}}, \theta_t)           
+    &amp;amp; \text{(tightness)} \\
+&amp;amp;\leq \mathcal{L}(q_{\vartheta_{t+1}}, \theta_{t+1})  
+    &amp;amp; \text{(M-Step)} \\
+&amp;amp;\leq \ell(\theta_{t+1} | \X)                         
+    &amp;amp; \text{(ELBO)}
+\end{aligned}$$&lt;/div&gt;
+&lt;p&gt;It is also possible to show that Expectation-Maximization converges to something &lt;em&gt;useful&lt;/em&gt;.  &lt;/p&gt;
+&lt;!-- Theorem: Local Maximum of ELBO is Local Maximum of Likelihood --&gt;
+
+&lt;div class="theorem"&gt;
+&lt;span class="label"&gt;Theorem.&lt;/span&gt; (Neal \&amp; Hinton 1998, Thm. 2) Every local maximum of the evidence lower bound $\mathcal{L}(q, \theta)$ is a local maximum of the data likelihood $\ell(\theta | \X)$.
+&lt;/div&gt;
+
+&lt;p&gt;Starting from an initial guess &lt;span class="math"&gt;\(\theta_0\)&lt;/span&gt;, We run this procedure until some stopping criterion is met and obtain a sequence &lt;span class="math"&gt;\(\{ (\vartheta_t, \theta_t) \}_{t=1}^T\)&lt;/span&gt; of parameter estimates.&lt;/p&gt;
+&lt;h1&gt;Example: Coin Flips&lt;/h1&gt;
+&lt;p&gt;Now that we have a good grasp on the theory behind Expectation Maximization, let's get some intuition by means of a simple example.  As usual, the simplest possible example involves coin flips!&lt;/p&gt;
+&lt;h2&gt;Probabilistic Model&lt;/h2&gt;
+&lt;p&gt;Suppose we have two coins, each with a different probability of heads, &lt;span class="math"&gt;\(\theta_A\)&lt;/span&gt; and &lt;span class="math"&gt;\(\theta_B\)&lt;/span&gt;, unknown to us.  We collect data from a series of &lt;span class="math"&gt;\(N\)&lt;/span&gt; trials in order to estimate the bias of each coin.  Each trial &lt;span class="math"&gt;\(k\)&lt;/span&gt; consists of flipping the same random coin &lt;span class="math"&gt;\(Z_k\)&lt;/span&gt; a total of &lt;span class="math"&gt;\(M\)&lt;/span&gt; times and recording only the total number &lt;span class="math"&gt;\(X_k\)&lt;/span&gt; of heads.  &lt;/p&gt;
+&lt;p&gt;This situation is best described by the following &lt;strong&gt;generative probabilistic model&lt;/strong&gt;, which precisely describes our assumptions about how the data was generated.  The corresponding graphical model and a set of sample data are shown in Figure \ref{fig:coinflip-pgm-data}.\
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$
+    \begin{aligned}
+    \theta &amp;amp;= (\theta_A, \theta_B)  &amp;amp;                       
+        &amp;amp;&amp;amp;\text{fixed coin biases} \\
+    Z_n &amp;amp;\sim \mathrm{Uniform}\{A, B\}    &amp;amp; \forall\, n=1,\dots,N
+        &amp;amp;&amp;amp;\text{coin indicators} \\
+    X_n | Z_n, \theta &amp;amp;\sim \mathrm{Bin}[\theta_{Z_n}, M] &amp;amp; \forall\, n=1,\dots,N
+        &amp;amp;&amp;amp;\text{head count}
+    \end{aligned}
+    $$&lt;/div&gt;
+&lt;h2&gt;Complete Data Log-Likelihood&lt;/h2&gt;
+&lt;p&gt;The complete data log-likelihood for a single trial &lt;span class="math"&gt;\((x_n, z_n)\)&lt;/span&gt; is
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$
+    \log p(x_n, z_n | \theta) = \log p(z_n) + \log p(x_n | z_n, \theta)
+    $$&lt;/div&gt;
+&lt;p&gt;
+In this model, &lt;span class="math"&gt;\(P(z_n) = \frac{1}{2}\)&lt;/span&gt; is uniform.  The remaining term is
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$\begin{aligned}
+    \log p(x_n | z_n, \theta)
+    &amp;amp;= \log \binom{M}{x_n} \theta_{z_n}^{x_n} (1-\theta_{z_n})^{M-x_n} \\
+    &amp;amp;= \log \binom{M}{x_n} + x_n \log\theta_{z_n} + (M-x_n)\log(1-\theta_{z_n})
+    \end{aligned}$$&lt;/div&gt;
+&lt;h2&gt;Expectation Maximization&lt;/h2&gt;
+&lt;p&gt;Now that we have specified the probabilistic model and worked out all relevant probabilities, we are ready to derive an Expectation Maximization algorithm.&lt;/p&gt;
+&lt;p&gt;The &lt;strong&gt;E-Step&lt;/strong&gt; is straightforward.  The &lt;strong&gt;M-Step&lt;/strong&gt; computes a new parameter estimate &lt;span class="math"&gt;\(\theta_{t+1}\)&lt;/span&gt; by optimizing over the lower bound found in the E-Step.  Let &lt;span class="math"&gt;\(\vartheta = \vartheta_{t+1} = \theta_t\)&lt;/span&gt;.  Then,
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$\begin{aligned}
+    \theta_{t+1}
+    = \arg\max_\theta \L(\theta, q_\vartheta)
+    &amp;amp;= \arg\max_\theta E_q[\log p(\X, Z | \theta )]                  \\
+    &amp;amp;= \arg\max_\theta E_q[\log p(\X | Z, \theta) p(Z)]              \\
+    &amp;amp;= \arg\max_\theta E_q[\log p(\X | Z, \theta)] + \log p(Z)        \\
+    &amp;amp;= \arg\max_\theta E_q[\log p(\X | Z, \theta)]
+    \end{aligned}$$&lt;/div&gt;
+&lt;p&gt;Now, because each trial is conditionally independent of the others, given the parameters,
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$\begin{aligned}
+    E_q[\log p(\X | Z, \theta)]                      
+    &amp;amp;= E_q\left[ \log \prod_{n=1}^N p(x_n | Z_n, \theta) \right]     
+     = \sum_{n=1}^N E_q[\log p(x_n | Z_n , \theta)]
+    \\
+    &amp;amp;= \sum_{n=1}^N E_q \bigg[
+            x_n \log \theta_{z_n} + (M-x_n) \log (1-\theta_{z_n})
+        \bigg] + \sum_{n=1}^N \log \binom{M}{x_n}
+    \\
+    &amp;amp;= \sum_{n=1}^N E_q \bigg[
+            x_n \log \theta_{z_n} + (M-x_n) \log (1-\theta_{z_n})
+        \bigg] + \text{const. w.r.t. } \theta
+    \\
+    &amp;amp;= \sum_{n=1}^N q_\vartheta(z_n=A)
+        \bigg[ x_n \log \theta_A + (M-x_n) \log \theta_A \bigg] \\
+    &amp;amp;+ \sum_{n=1}^N q_\vartheta(z_n=B)
+        \bigg[ x_n \log \theta_B + (M-x_n) \log \theta_B \bigg]
+     + \text{const. w.r.t. } \theta
+    \end{aligned}$$&lt;/div&gt;
+&lt;p&gt;Let &lt;span class="math"&gt;\(a_k = q(z_k = A)\)&lt;/span&gt; and &lt;span class="math"&gt;\(b_k = q(z_k = B)\)&lt;/span&gt;.  Note &lt;span class="math"&gt;\(\sum_{k=1}^N a_k = \sum_{k=1}^N b_k = 1\)&lt;/span&gt;.  To maximize the above expression with respect to the parameters, we take derivatives with respect to &lt;span class="math"&gt;\(\theta_A\)&lt;/span&gt; and &lt;span class="math"&gt;\(\theta_B\)&lt;/span&gt; and set to zero:
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$\begin{aligned}
+    \frac{\partial}{\partial \theta_A} \bigg[ E_q[\log p(\X | Z, \theta)] \bigg]
+    &amp;amp;= \frac{1}{\theta_A} \sum_{n=1}^N a_n x_n
+     + \frac{1}{1-\theta_A} \sum_{n=1}^N a_n (M-x_n) = 0 \\
+    %
+    \frac{\partial}{\partial \theta_B} \bigg[ E_q[\log p(\X | Z, \theta)] \bigg]
+    &amp;amp;= \frac{1}{\theta_B} \sum_{n=1}^N b_n x_n
+     + \frac{1}{1-\theta_B} \sum_{n=1}^N b_n (M-x_n) = 0 \\
+    \end{aligned}$$&lt;/div&gt;
+&lt;p&gt;Solving for &lt;span class="math"&gt;\(\theta_A\)&lt;/span&gt; and &lt;span class="math"&gt;\(\theta_B\)&lt;/span&gt;, we obtain
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$
+    \theta_A = \frac{\sum_{n=1}^N a_n x_n}{\sum_{n=1}^N a_n M}
+    \qquad
+    \theta_B = \frac{\sum_{n=1}^N b_n x_n}{\sum_{n=1}^N b_n M}
+    $$&lt;/div&gt;
+&lt;h1&gt;Example:  Gaussian Mixture Model&lt;/h1&gt;
+&lt;h2&gt;Probabilistic Model&lt;/h2&gt;
+&lt;p&gt;In a Gaussian Mixture Model, samples are drawn from a random &lt;em&gt;cluster&lt;/em&gt;, each normally distributed with its own mean and variance.  Our goal will be to estimate the following parameters:
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$
+    \begin{aligned}
+    \vec\pi &amp;amp;= (\pi_1, \dots, \pi_K) &amp;amp;&amp;amp; \text{mixing weights} \\
+    \vec\mu &amp;amp;= (\mu_1, \dots, \mu_K) &amp;amp;&amp;amp; \text{cluster centers} \\
+    \vec\Sigma &amp;amp;= (\Sigma_1, \dots, \Sigma_K) &amp;amp;&amp;amp; \text{cluster variance}
+    \end{aligned}
+    $$&lt;/div&gt;
+&lt;p&gt;
+The full model specification is below.  A graphical model is shown in Figure \ref{fig:gmm-pgm}.
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$
+    \begin{aligned}
+    \theta &amp;amp;= (\vec\pi, \vec\mu, \vec\Sigma) &amp;amp;&amp;amp; \text{model parameters} \\
+    z_n &amp;amp;\sim \mathrm{Cat}[\pi]  &amp;amp;&amp;amp; \text{cluster indicators} \\
+    x_n | z_n, \theta &amp;amp;\sim \mathcal{N}(\mu_{z_n}, \Sigma_{z_n}) &amp;amp;&amp;amp; \text{base distribution}
+    \end{aligned}
+    $$&lt;/div&gt;
+&lt;h3&gt;Complete Data Log-Likelihood&lt;/h3&gt;
+&lt;p&gt;The complete data log-likelihood for a single datapoint &lt;span class="math"&gt;\((x_n, z_n)\)&lt;/span&gt; is
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$\begin{aligned}
+    \log p(x_n, z_n | \theta)
+    &amp;amp;= \log \prod_{k=1}^K \pi_k \mathcal{N}(x_n \mid \mu_k, \Sigma_k)^{\mathbb{I}(z_n = k)} \\
+    &amp;amp;= \sum_{k=1}^K \mathbb{I}(z_n = k) \log \pi_k \mathcal{N}(x_n \mid \mu_k, \Sigma_k)
+    \end{aligned}$$&lt;/div&gt;
+&lt;p&gt;
+Similarly, the complete data log-likelihood over all points &lt;span class="math"&gt;\(\{ (x_n, z_n) \}_{n=1}^N\)&lt;/span&gt; is
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$
+    \log p(X,Z | \theta)
+    = \sum_{n=1}^N \log p(x_n, z_n | \theta)
+    = \sum_{n=1}^N \sum_{k=1}^K \mathbb{I}(z_n = k) \log \pi_k \mathcal{N}(x_n \mid \mu_k, \Sigma_k)
+    $$&lt;/div&gt;
+&lt;h3&gt;Hidden Posterior&lt;/h3&gt;
+&lt;p&gt;The hidden posterior for a single point &lt;span class="math"&gt;\((x_n, z_n)\)&lt;/span&gt; can be found using Bayes' rule:
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$\begin{aligned}
+    p(z_n = k | x_n, \theta)
+    &amp;amp;= \frac{P(z_n=k | \theta) p(x_n | z_n=k, \theta)}{p(x_N | \theta)} \\
+    &amp;amp;= \frac{\pi_k \mathcal{N}(x_n | \mu_k, \Sigma_k)}{\sum_{k'=1}^K \pi_{k'} \mathcal{N}(x_n | \mu_{k'}, \Sigma_{k'})}
+    \end{aligned}$$&lt;/div&gt;
+&lt;h2&gt;Expectation Maximization&lt;/h2&gt;
+&lt;p&gt;Our derivation will follow that of [murphy:mlapp], adapted to our notation.&lt;/p&gt;
+&lt;h3&gt;E-Step&lt;/h3&gt;
+&lt;p&gt;Before the E-step, we have an estimate &lt;span class="math"&gt;\(\theta_t\)&lt;/span&gt; of the parameters, and seek to compute a new lower bound on the observed log-likelihood.  Earlier, we showed that the optimal lower bound is
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$
+    \L(q_{\theta_t}, \theta) = E_q[ \log p(\X,Z|\theta)] + \text{const.}
+    $$&lt;/div&gt;
+&lt;p&gt;
+where &lt;span class="math"&gt;\(q_{\theta_t}(z) \equiv p(z|\X,\theta_t)\)&lt;/span&gt; and the second term is constant with respect to &lt;span class="math"&gt;\(\theta\)&lt;/span&gt;.  The E-Step requires us to derive an expression for the first term.  Using \autoref{gmm:complete-log-likelihood}, the expected complete data log-likelihood is given by
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$\begin{aligned}
+    Q(\theta_t, \theta) = E_q[ \log p(\X,Z|\theta)]
+    &amp;amp;= \sum_{n=1}^N \sum_{k=1}^K
+            E_q\big[ \mathbb{I}(z_n = k) \log \pi_k \mathcal{N}(x_n \mid \mu_k, \Sigma_k) \big] \\
+    &amp;amp;= \sum_{n=1}^N \sum_{k=1}^K
+            E_q\big[ \mathbb{I}(z_n = k) \big]
+            \log \pi_k \mathcal{N}(x_n \mid \mu_k, \Sigma_k) \\
+    &amp;amp;= \sum_{n=1}^N \sum_{k=1}^K
+            p(z_n=k \mid x_n, \theta_t)
+            \log \pi_k \mathcal{N}(x_n \mid \mu_k, \Sigma_k) \\
+    &amp;amp;= \sum_{n=1}^N \sum_{k=1}^K
+            r_{nk} \log \pi_k
+     + \sum_{n=1}^N \sum_{k=1}^K
+            r_{nk} \log \mathcal{N}(x_n \mid \mu_k, \Sigma_k)
+    \end{aligned}$$&lt;/div&gt;
+&lt;p&gt;
+where &lt;span class="math"&gt;\(r_{nk} \equiv p(z_n = k \mid x_n, \theta_t)\)&lt;/span&gt; is the &lt;strong&gt;responsibility&lt;/strong&gt; that cluster &lt;span class="math"&gt;\(k\)&lt;/span&gt; takes for data point &lt;span class="math"&gt;\(x_n\)&lt;/span&gt; after step &lt;span class="math"&gt;\(t\)&lt;/span&gt;.  During the E-Step, we compute these values explicitly with \autoref{gmm:hidden-posterior}.&lt;/p&gt;
+&lt;h3&gt;M-Step&lt;/h3&gt;
+&lt;p&gt;During the M-Step, we optimize our lower bound with respect to the parameters &lt;span class="math"&gt;\(\theta = (\vec\pi, \vec\mu, \vec\Sigma)\)&lt;/span&gt;.  For the mixing weights &lt;span class="math"&gt;\(\vec\pi\)&lt;/span&gt;, we use Lagrange multipliers to maximize the ELBO subject to the constraint &lt;span class="math"&gt;\(\sum_{k=1}^K \pi_k = 1\)&lt;/span&gt;.  The Lagrangian is
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$
+    \Lambda(\pi, \lambda) = Q(\theta_t, \theta) + \lambda \left( \sum_{k=1}^K \pi_k - 1 \right)
+    $$&lt;/div&gt;
+&lt;p&gt;
+Carrying out the optimization, we find that &lt;span class="math"&gt;\(\lambda = -N\)&lt;/span&gt;.  The correct update for the mixing weights is
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$
+    \boxed{ \pi_k = \frac{1}{N} \sum_{n=1}^N r_{nk} = \frac{r_k}{N} }
+    $$&lt;/div&gt;
+&lt;p&gt;
+where &lt;span class="math"&gt;\(r_k \equiv \sum_{n=1}^n r_{nk}\)&lt;/span&gt; is the &lt;em&gt;effective&lt;/em&gt; number of points assigned to cluster &lt;span class="math"&gt;\(k\)&lt;/span&gt;.  For the cluster centers &lt;span class="math"&gt;\(\vec\mu\)&lt;/span&gt; and variance &lt;span class="math"&gt;\(\vec\Sigma\)&lt;/span&gt;, you should verify that the correct updates are
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$
+    \boxed{ \mu_k = \frac{\sum_{n=1}^N r_{nk} x_n}{r_k} }
+    \qquad
+    \boxed{ \Sigma_k = \frac{\sum_{n=1}^N r_{nk} x_n x_n^T}{r_k} - \mu_k \mu_k^T }
+    $$&lt;/div&gt;
+&lt;h1&gt;Advice for Deriving EM Algorithms&lt;/h1&gt;
+&lt;p&gt;The previous two examples suggest a general approach for deriving a new algorithm.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Specify the probabilistic model.&lt;/strong&gt;  Identify the observed variables, hidden variables, and parameters.  Draw the corresponding graphical model to help determine the underlying independence structure.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Identify the complete-data likelihood &lt;span class="math"&gt;\(P(X,Z|\theta)\)&lt;/span&gt;.&lt;/strong&gt;  For exponential family models, the complete-data likelihood will be convex and easy to optimize.  In other models, other work may be required.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Identify the hidden posterior &lt;span class="math"&gt;\(P(Z|X,\theta)\)&lt;/span&gt;.&lt;/strong&gt;  If this distribution is not tractable, you may want to consider variational inference, which we will discuss later.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Derive the E-Step.&lt;/strong&gt;  Write down an expression for &lt;span class="math"&gt;\(E_q[ \log p(\X | Z,\theta)]\)&lt;/span&gt;.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Derive the M-Step.&lt;/strong&gt;  Try taking derivatives and setting to zero.  If this doesn't work, you may need to resort to gradient-based methods or variational inference.&lt;/li&gt;
+&lt;/ul&gt;</content></entry><entry><title>Incompressible Fluid Simulation</title><link href="http://benrbray.com/posts/2015/incompressible-fluid-simulation" rel="alternate"></link><published>2015-08-21T00:00:00-04:00</published><updated>2015-08-21T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2015-08-21:/posts/2015/incompressible-fluid-simulation</id><summary type="html">&lt;p&gt;Simulation of two-dimensional incompressible flow with periodic boundary conditions, achieved by solving the Euler Equations in the frequency domain via the Fast Fourier Transform (FFT).  Written in Java.&lt;/p&gt;</summary><content type="html">&lt;p&gt;Simulation of two-dimensional incompressible flow with periodic boundary conditions, achieved by solving the Euler Equations in the frequency domain via the Fast Fourier Transform (FFT).  Written in Java.&lt;/p&gt;
+&lt;p&gt;&lt;img alt="Fluid Simulation" src="http://benrbray.com/images/fluid.png"&gt;&lt;/p&gt;
+&lt;p&gt;Based on the following excellent resources:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Stam, Jos. Stable Fluids. SIGGRAPH 99, Los Angeles, CA.&lt;/li&gt;
+&lt;li&gt;Bridson, Robert, and Matthias Müller-Fischer. Fluid Simulation. SIGGRAPH 07. Course Notes.&lt;/li&gt;
+&lt;/ul&gt;</content><category term="fluid-simulation"></category><category term="graphics"></category><category term="gpu"></category><category term="numerical-methods"></category></entry><entry><title>Maze Generation</title><link href="http://benrbray.com/posts/2015/maze-generation" rel="alternate"></link><published>2015-03-20T00:00:00-04:00</published><updated>2015-03-20T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2015-03-20:/posts/2015/maze-generation</id><summary type="html">&lt;p&gt;Comparison of maze generation algorithms.&lt;/p&gt;</summary><content type="html"></content><category term="algorithms"></category></entry><entry><title>Seam Carving</title><link href="http://benrbray.com/posts/2014/seam-carving" rel="alternate"></link><published>2014-12-28T00:00:00-05:00</published><updated>2014-12-28T00:00:00-05:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2014-12-28:/posts/2014/seam-carving</id><summary type="html">&lt;p&gt;&lt;a href="https://en.wikipedia.org/wiki/Seam_carving"&gt;Seam Carving&lt;/a&gt; is a classic dynamic programming algorithm for content-aware image resizing.  Rather than scaling or cropping, the seam carving algorithm resizes images by removing (or copying) horizontal and vertical slices of the image.  These slices, called &lt;em&gt;seams&lt;/em&gt;, must cross the entire image, but are allowed to zig and zag around salient regions in order to avoid too much deformation.&lt;/p&gt;</summary><content type="html">&lt;style&gt;
+figure {
+    position: relative;
+}
+
+.eqheight {
+    display: flex;
+    width: 100%;
+    align-content: center;
+    justify-content: center;
+}
+
+.eqheight img {
+    max-width: 100%;
+}
+
+.eqheight div {
+    padding: 0.2em;
+}
+
+#seam-algorithm {
+    display: grid;
+    align-items: center;
+    grid: 1fr / 5fr 3fr;
+    grid-auto-flow: row;
+    grid-gap: 1em;
+}
+&lt;/style&gt;
+
+&lt;p&gt;&lt;a href="https://en.wikipedia.org/wiki/Seam_carving"&gt;Seam Carving&lt;/a&gt; is a classic dynamic programming algorithm for content-aware image resizing.  Rather than scaling or cropping, the seam carving algorithm resizes images by removing (or copying) horizontal and vertical slices of the image.  These slices, called &lt;em&gt;seams&lt;/em&gt;, must cross the entire image, but are allowed to zig and zag around salient regions in order to avoid too much deformation.  &lt;/p&gt;
+&lt;p&gt;Below, the image to the left was resized using my &lt;a href="http://localhost:8000/static/seam-carving/index.html"&gt;seam carving demo&lt;/a&gt; to produce the image on the right.  Images of hot-air balloons are practically the best-case scenario for seam carving, since the salient objects in the image (balloons!) are mostly surrounded by empty space.  Click the link to try it out for yourself, in real-time, on a variety of test images!&lt;/p&gt;
+&lt;figure&gt;
+    &lt;div class="eqheight"&gt;
+        &lt;div&gt;
+        &lt;img src="/static/seam-carving/img/balloons.png"&gt;&lt;/div&gt;
+        &lt;div&gt;&lt;img src="/static/seam-carving/results/balloons-after.png"&gt;&lt;/div&gt;
+    &lt;/div&gt;
+&lt;/figure&gt;
+
+&lt;p&gt;Seam carving was first introduced by &lt;strong&gt;[Avidan &amp;amp; Shamir 2007]&lt;/strong&gt; at SIGGRAPH.  Due to its simplicity and effectiveness, the algorithm has since made its way into computer science textbooks as well as commercial photo editing software.  To me, this technique is quite refreshing, and serves as a reminder that not all problems require a deep neural network!&lt;/p&gt;
+&lt;blockquote class="citation"&gt;
+Avidan, Shai, and Ariel Shamir. &lt;a href="http://www.faculty.idc.ac.il/arik/SCWeb/imret/index.html"&gt;"Seam carving for content-aware image resizing."&lt;/a&gt; In ACM SIGGRAPH 2007 papers, pp. 10-es. 2007.
+&lt;/blockquote&gt;
+
+&lt;p&gt;Typically, seam carving implementations alternate between taking horizontal and vertical slices to reduce the height and width of an image.  For width reduction, the algorithm works in several phases:&lt;/p&gt;
+&lt;figure id="seam-algorithm"&gt;
+    &lt;div&gt;
+    1. &lt;b&gt;Energy Computation.&lt;/b&gt;  Assign an *importance* value to each pixel in the image.  Common choices for the energy function include gradient magnitude, entropy, and visual salience.
+    &lt;/div&gt;
+    &lt;img src="/static/seam-carving/results/balloons-salience.png"&gt;
+    &lt;div&gt;
+    2. &lt;b&gt;Downward Accumulation.&lt;/b&gt;  In a dynamic programming implementation of seam carving, the downward accumulation phase keeps track of, for each pixel, the value of the *minimum* energy path from this pixel to the top of the image.
+    &lt;/div&gt;
+    &lt;img src="/static/seam-carving/results/balloons-energy.png"&gt;
+    &lt;div&gt;
+    3. &lt;b&gt;Backtracking &amp; Seam Removal.&lt;/b&gt; Once downward accumulation is complete, a backtracking algorithm is recovers the lowest-energy seams for each pixel in the bottom row of the image.  The seams with the lowest energy are removed from the image.
+    &lt;/div&gt;
+    &lt;img src="/static/seam-carving/results/balloons-seams.png"&gt;
+&lt;/figure&gt;
+
+&lt;p&gt;Vertical resizing follows an analogous procedure.  To increase the dimensions of an image, low-energy seams are &lt;em&gt;duplicated&lt;/em&gt; instead of removed.  Further variations exist for efficiently removing many seams simultanously, for intelligently cropping after no low-energy seams remain, and even for &lt;a href="https://www.youtube.com/watch?v=Ug2aDccYN3c"&gt;seam-carving videos&lt;/a&gt;!&lt;/p&gt;</content><category term="image-processing"></category><category term="algorithms"></category></entry><entry><title>Code Diff</title><link href="http://benrbray.com/posts/2014/code-diff" rel="alternate"></link><published>2014-12-13T00:00:00-05:00</published><updated>2014-12-13T00:00:00-05:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2014-12-13:/posts/2014/code-diff</id><summary type="html">&lt;p&gt;Git-style code diff with the Longest Common Subsequence algorithm.&lt;/p&gt;</summary><content type="html"></content><category term="algorithms"></category></entry><entry><title>AdamBots Automated Scouting Kit</title><link href="http://benrbray.com/posts/2014/adambots-automated-scouting-kit" rel="alternate"></link><published>2014-06-01T00:00:00-04:00</published><updated>2014-06-01T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2014-06-01:/posts/2014/adambots-automated-scouting-kit</id><summary type="html">&lt;p&gt;Match prediction and analysis for FIRST FRC competitions.&lt;/p&gt;</summary><content type="html">&lt;style&gt;
+table.frcdata {
+    margin: 0 auto 1em auto;
+    border: 1px solid black;
+    border-collapse: collapse;
+    text-align: center;
+}
+
+table.frcdata th {
+    padding: 0.3em;
+}
+
+table.frcdata td {
+    padding: 0.3em;
+}
+
+table.frcdata .red {
+    background-color: #f2dede;
+}
+
+table.frcdata .blue {
+    background-color: #c4e3f3;
+}
+
+#frc-matches td:first-child {
+    text-align: left;
+}
+
+#frc-matches td:last-child {
+    text-align: right;
+}
+&lt;/style&gt;
+
+&lt;h1&gt;FIRST Robotics Competition&lt;/h1&gt;
+&lt;p&gt;For six weeks each winter, high-school students in more than 25 countries devote their evenings, nights, and weekends to build game-playing robots as part of the &lt;strong&gt;FIRST Robotics Competition (FRC)&lt;/strong&gt;.  The robots are designed, built, and programmed by students, with guidance from industry professionals (&lt;em&gt;aka parents&lt;/em&gt;!) who volunteer their time. &lt;/p&gt;
+&lt;p&gt;To encourage innovation, the rules of the game change each year.  Starting from January, students are allowed six weeks to design, build, program, and test their robots before competitions begin in March.  During competition season, many teams compete weekly or biweekly in their region for a chance to advance to the world championships in April.&lt;/p&gt;
+&lt;p&gt;During the 2011-2013 seasons, I was a member of the &lt;a href="https://www.adambots.com/"&gt;AdamBots (Team #245)&lt;/a&gt;, where I led a group of students in programming our team's robot.  Once build season is over, no major changes are allowed to the robot, including code, so &lt;a href="http://www.curtisfenner.com/"&gt;Curtis Fenner&lt;/a&gt; and I searched for a way to use our programming skills to help give our team a &lt;strong&gt;strategic edge&lt;/strong&gt; during competition season.  The result was &lt;strong&gt;AdamBots Automated Scouting Kit&lt;/strong&gt;!&lt;/p&gt;
+&lt;h2&gt;Scouting &amp;amp; Alliance Selection&lt;/h2&gt;
+&lt;p&gt;Each competition consists of a series &lt;strong&gt;qualification matches&lt;/strong&gt; between two alliances, &lt;span style="color:red"&gt;red&lt;/span&gt; and &lt;span style="color:blue"&gt;blue&lt;/span&gt;, consisting of three randomly-assigned teams each.  Robots on the same alliance work together to defeat robots on the opposing alliance.  At the end of each match, the score of each alliance as a whole is reported.  Following the qualification matches, teams with a high enough aggregate score advance to the &lt;strong&gt;elimination rounds&lt;/strong&gt; and are allowed to choose permanent alliance partners.  &lt;/p&gt;
+&lt;p&gt;The simplest alliance selection strategy would be to choose two teams which have accumulated the most points during the qualification rounds.  However, since FIRST only reports aggregate alliance scores, this strategy is not ideal; good robots may have been dragged down by consistently underperforming partners.&lt;/p&gt;
+&lt;p&gt;In preparation for alliance selection, many teams employ &lt;strong&gt;scouts&lt;/strong&gt; to take handwritten notes about the performance of other teams during the qualification matches.  Scouts make note of robots with special abilities, adept human operators, or frequent mechanical failures.  Scouts on our team also attempted to manually track the points contributed by each individual alliance member, in order to estimate the expected score contributed by a potential alliance partner.  However, six teams particpate in each match, requiring &lt;em&gt;six scouts&lt;/em&gt; for accurate reporting.  At some events, there may even be two or three matches happening simultaneously.  Predictably, this form of manual scouting was labor intensive and error prone!&lt;/p&gt;
+&lt;h1&gt;AdamBots Automated Scouting Kit&lt;/h1&gt;
+&lt;p&gt;Our automated scouting kit analyzes real-time competition data published by FIRST and displays the results on a web page that can be accessed during and after each competition.  We perform several computations to estimate the performance of each team individually, based on aggregate alliance scores:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;&lt;strong&gt;Auton Score:&lt;/strong&gt; Estimated points scored, on average, during the autonomous phase.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Climb Score:&lt;/strong&gt; Estimated points scored, on average, by climbing the pyramid.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Teleop Score:&lt;/strong&gt; Estimated points scored, on average, during the human-operated phase.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Offensive Power Rating (OPR):&lt;/strong&gt; An estimate of the total points scored, on average. This number represents the offensive utility of a team.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Defensive Power Rating (DPR):&lt;/strong&gt; An estimate of the defensive utility of a team. May be interpreted as the number of points that a team takes away from its opposing alliance, on average.&lt;/li&gt;
+&lt;li&gt;&lt;strong&gt;Calculated Contribution to Winning Margin (CCWM):&lt;/strong&gt; An estimate of the number of points a team contributes to the winning margin of its alliance.  May be negative if the team consistently loses!&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Based on these computations, we also provide:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Predictions of all past and future match scores, based on the official schedule.&lt;/li&gt;
+&lt;li&gt;Predictions for hypothetical matches between potential alliance partners.&lt;/li&gt;
+&lt;li&gt;A correlation matrix for all of our computed metrics. &lt;/li&gt;
+&lt;li&gt;A graph of the winning and losing scores over time.&lt;/li&gt;
+&lt;li&gt;A histogram of the OPR and CCWM of all participating teams.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Originally, AASK scraped competition data from the FIRST website, but unfortunately the old match data is no longer available.  Instead, the &lt;a href="/static/aask/aask.html"&gt;demo hosted here&lt;/a&gt; runs with cached match data from the 2013 World Championship.  See below for a screenshot, followed by an explanation of the mathematical details.&lt;/p&gt;
+&lt;p&gt;&lt;img src="/static/aask/img/aask_ex1.png"&gt;&lt;/img&gt;&lt;/p&gt;
+&lt;h1&gt;Mathematical Details&lt;/h1&gt;
+&lt;h2&gt;Data Format&lt;/h2&gt;
+&lt;p&gt;Suppose we have data about &lt;span class="math"&gt;\(T\)&lt;/span&gt; teams competing in &lt;span class="math"&gt;\(M\)&lt;/span&gt; matches.  During each match, two alliances of three teams each compete to score the most points.  During competition, FIRST publishes a real-time &lt;strong&gt;match results&lt;/strong&gt; table containing total alliance scores for each match.  For example:&lt;/p&gt;
+&lt;!-- Example Scores --&gt;
+
+&lt;table id="frc-matches" class="frcdata"&gt;
+&lt;colgroup&gt;
+    &lt;col&gt;
+    &lt;col class="red" /&gt;
+    &lt;col class="blue" /&gt;
+    &lt;col&gt;
+&lt;/colgroup&gt;
+&lt;thead&gt;&lt;tr&gt;
+    &lt;th&gt;Red Alliance&lt;/th&gt;
+    &lt;th&gt;Red Score&lt;/th&gt;
+    &lt;th&gt;Blue Score&lt;/th&gt;
+    &lt;th&gt;Blue Alliance&lt;/th&gt;
+&lt;/tr&gt;&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;&lt;td&gt;Team 48, 49, 50&lt;/td&gt;&lt;td&gt;71&lt;/td&gt;&lt;td&gt;174&lt;/td&gt;&lt;td&gt;Team 51, 52, 53&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;Team 54, 55, 56&lt;/td&gt;&lt;td&gt;70&lt;/td&gt;&lt;td&gt;122&lt;/td&gt;&lt;td&gt;Team 57, 58, 59&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;Team 60, 61, 17&lt;/td&gt;&lt;td&gt;160&lt;/td&gt;&lt;td&gt;186&lt;/td&gt;&lt;td&gt;Team 62, 63, 16&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;Team 13, 5, 34 &lt;/td&gt;&lt;td&gt;92&lt;/td&gt;&lt;td&gt;105&lt;/td&gt;&lt;td&gt;Team 28, 14, 18&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;Team 9, 0, 36 &lt;/td&gt;&lt;td&gt;113&lt;/td&gt;&lt;td&gt;89&lt;/td&gt;&lt;td&gt;Team 10, 23, 28&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;p&gt;During the 2013 season, each match consisted of three phases:  Autonomus Period (AP), Climb Period (CP), and Teleoperated Period (TP).  Points scored during each individual phase by an alliance are recorded for each match, but &lt;em&gt;not reported publicly&lt;/em&gt;.  Instead, for each team, the &lt;strong&gt;rankings&lt;/strong&gt; table reports the aggregate points earned as part of an alliance during each phase, summed across all matches played so far.  This table also contains the Win/Tie/Loss record and qualificaiton score for each team.&lt;/p&gt;
+&lt;table id="frc-rankings" class="frcdata"&gt;
+&lt;colgroup&gt;
+    &lt;col /&gt;
+    &lt;col style="background-color: #e0e0e0" /&gt;
+    &lt;col /&gt;
+    &lt;col style="background-color: #e0e0e0" /&gt;
+    &lt;col style="background-color: #e0e0e0" /&gt;
+    &lt;col style="background-color: #e0e0e0" /&gt;
+    &lt;col /&gt;
+&lt;/colgroup&gt;
+&lt;thead&gt;&lt;tr&gt;
+    &lt;th&gt;Rank&lt;/th&gt;
+    &lt;th&gt;Team&lt;/th&gt;
+    &lt;th&gt;QS&lt;/th&gt;
+    &lt;th&gt;AP&lt;/th&gt;
+    &lt;th&gt;CP&lt;/th&gt;
+    &lt;th&gt;TP&lt;/th&gt;
+    &lt;th&gt;Record&lt;/th&gt;
+&lt;/tr&gt;&lt;/thead&gt;
+&lt;tbody&gt;
+&lt;tr&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;118&lt;/td&gt;&lt;td&gt;16.0&lt;/td&gt;&lt;td&gt;394&lt;/td&gt;&lt;td&gt;170&lt;/td&gt;&lt;td&gt;636&lt;/td&gt;&lt;td&gt;8-0-0&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;2&lt;/td&gt;&lt;td&gt;1114&lt;/td&gt;&lt;td&gt;14.0&lt;/td&gt;&lt;td&gt;336&lt;/td&gt;&lt;td&gt;320&lt;/td&gt;&lt;td&gt;636&lt;/td&gt;&lt;td&gt;7-1-0&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;3&lt;/td&gt;&lt;td&gt;2169&lt;/td&gt;&lt;td&gt;14.0&lt;/td&gt;&lt;td&gt;304&lt;/td&gt;&lt;td&gt;210&lt;/td&gt;&lt;td&gt;679&lt;/td&gt;&lt;td&gt;7-1-0&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;4&lt;/td&gt;&lt;td&gt;1425&lt;/td&gt;&lt;td&gt;14.0&lt;/td&gt;&lt;td&gt;300&lt;/td&gt;&lt;td&gt;220&lt;/td&gt;&lt;td&gt;758&lt;/td&gt;&lt;td&gt;7-1-0&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;5&lt;/td&gt;&lt;td&gt;2630&lt;/td&gt;&lt;td&gt;13.0&lt;/td&gt;&lt;td&gt;250&lt;/td&gt;&lt;td&gt;130&lt;/td&gt;&lt;td&gt;794&lt;/td&gt;&lt;td&gt;6-1-1&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;td&gt;6&lt;/td&gt;&lt;td&gt;1241&lt;/td&gt;&lt;td&gt;12.0&lt;/td&gt;&lt;td&gt;330&lt;/td&gt;&lt;td&gt;170&lt;/td&gt;&lt;td&gt;644&lt;/td&gt;&lt;td&gt;6-0-2&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;h2&gt;Modeling Assumptions&lt;/h2&gt;
+&lt;p&gt;Many factors contribute to the overall performance of a team, and the complex interactions between allied and opposing teams are difficult to model directly.  For simplicity, we assume that each team &lt;span class="math"&gt;\(t\)&lt;/span&gt; possesses an intrinsic &lt;strong&gt;offensive power rating (OPR)&lt;/strong&gt;, denoted &lt;span class="math"&gt;\(\theta_t\)&lt;/span&gt;, representing the number of points a team contributes, &lt;em&gt;on average&lt;/em&gt;, to the total score of it alliance.&lt;/p&gt;
+&lt;h3&gt;Match Prediction&lt;/h3&gt;
+&lt;p&gt;Under our model, the score of an alliance during each qualification match is determined by adding up the OPR of each alliance member.  More precisely, if the &lt;span style="color:red"&gt;red&lt;/span&gt; alliance for a match consists of teams &lt;span class="math"&gt;\(a\)&lt;/span&gt;, &lt;span class="math"&gt;\(b\)&lt;/span&gt;, and &lt;span class="math"&gt;\(c\)&lt;/span&gt;, and the &lt;span style="color:blue"&gt;blue&lt;/span&gt; alliance consists of teams &lt;span class="math"&gt;\(x\)&lt;/span&gt;, &lt;span class="math"&gt;\(y\)&lt;/span&gt;, and &lt;span class="math"&gt;\(z\)&lt;/span&gt;, we predict the following match outcome:&lt;/p&gt;
+&lt;div class="math"&gt;$$
+\begin{aligned}
+\mathrm{Score}_{\color{red}red} &amp;amp;= \theta_a + \theta_b + \theta_c \\
+\mathrm{Score}_{\color{blue}blue} &amp;amp;= \theta_x + \theta_y + \theta_z
+\end{aligned}
+$$&lt;/div&gt;
+&lt;h3&gt;Rank Prediction&lt;/h3&gt;
+&lt;p&gt;Let's see how this model can be used to predict the outcomes of the qualification rounds as a whole.  Suppose we have the following match schedule for &lt;span class="math"&gt;\(T=6\)&lt;/span&gt; teams playing &lt;span class="math"&gt;\(M=6\)&lt;/span&gt; matches.  Further, suppose we already know the offensive power rating for every team, which we store in a vector &lt;span class="math"&gt;\(\theta \in \R^T\)&lt;/span&gt;.&lt;/p&gt;
+&lt;table class="frcdata"&gt;
+&lt;colgroup&gt;
+    &lt;col&gt;
+    &lt;col class="red" /&gt;
+    &lt;col class="blue" /&gt;
+&lt;/colgroup&gt;
+&lt;thead&gt;&lt;tr&gt;
+    &lt;th&gt;Match&lt;/th&gt;&lt;th&gt;Red Alliance&lt;/th&gt;&lt;th&gt;Blue Alliance&lt;/th&gt;
+&lt;/tr&gt;&lt;/thead&gt;
+&lt;tbody&gt;
+    &lt;tr&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;Team 0, 1, 2&lt;/td&gt;&lt;td&gt;Team 3, 4, 5&lt;/td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;2&lt;/td&gt;&lt;td&gt;Team 1, 3, 5&lt;/td&gt;&lt;td&gt;Team 0, 2, 4&lt;/td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;3&lt;/td&gt;&lt;td&gt;Team 0, 1, 3&lt;/td&gt;&lt;td&gt;Team 2, 4, 5&lt;/td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;4&lt;/td&gt;&lt;td&gt;Team 1, 3, 4&lt;/td&gt;&lt;td&gt;Team 0, 2, 5&lt;/td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;5&lt;/td&gt;&lt;td&gt;Team 0, 4, 5&lt;/td&gt;&lt;td&gt;Team 1, 2, 3&lt;/td&gt;&lt;/tr&gt;
+    &lt;tr&gt;&lt;td&gt;6&lt;/td&gt;&lt;td&gt;Team 1, 4, 3&lt;/td&gt;&lt;td&gt;Team 0, 2, 5&lt;/td&gt;&lt;/tr&gt;
+&lt;/tbody&gt;
+&lt;/table&gt;
+
+&lt;table class="frcdata"&gt;
+&lt;tr&gt;&lt;th&gt;Team&lt;/th&gt;&lt;td&gt;0&lt;/td&gt;&lt;td&gt;1&lt;/td&gt;&lt;td&gt;2&lt;/td&gt;&lt;td&gt;3&lt;/td&gt;&lt;td&gt;4&lt;/td&gt;&lt;td&gt;5&lt;/td&gt;&lt;/tr&gt;
+&lt;tr&gt;&lt;th&gt;OPR&lt;/th&gt;&lt;td&gt;0.28&lt;/td&gt;&lt;td&gt;5.91&lt;/td&gt;&lt;td&gt;9.96&lt;/td&gt;&lt;td&gt;3.23&lt;/td&gt;&lt;td&gt;4.61&lt;/td&gt;&lt;td&gt;5.17&lt;/td&gt;&lt;/tr&gt;
+&lt;/table&gt;
+
+&lt;p&gt;To predict the aggregate score for a single team during the qualification rounds, we add up the OPRs for the teams it has allied with.  For example, team 3 participated in all six matches, playing with team 0 once, team 1 five times, team 2 once, team 4 three times, and team 5 twice.  Therefore, we predict the total score accumulated by team 3 during the qualification rounds to be:
+&lt;/p&gt;
+&lt;div class="math"&gt;$$
+y_3 = 1 \theta_0 + 5 \theta_1 + 1 \theta_2 + 6 \theta_3 + 3 \theta_4 + 2 \theta_5
+$$&lt;/div&gt;
+&lt;p&gt;We can do this for each team to compute a vector &lt;span class="math"&gt;\(y \in \R^T\)&lt;/span&gt; of qualification scores.  Note that the above computation looks suspiciously like a dot product, suggesting that we can compute qualification scores using matrix-vector multiplication.  Define the &lt;strong&gt;alliance matrix&lt;/strong&gt; &lt;span class="math"&gt;\(A \in \R^{T \times T}\)&lt;/span&gt; to have entries &lt;span class="math"&gt;\(a_{ts}\)&lt;/span&gt; indicating the number of matches for which team &lt;span class="math"&gt;\(t\)&lt;/span&gt; allied with team &lt;span class="math"&gt;\(s\)&lt;/span&gt;.  Below is the alliance matrix for our sample schedule.&lt;/p&gt;
+&lt;div class="math"&gt;$$
+A = \begin{bmatrix}
+    6 &amp;amp; 2 &amp;amp; 4 &amp;amp; 1 &amp;amp; 2 &amp;amp; 3 \\
+    2 &amp;amp; 6 &amp;amp; 2 &amp;amp; 5 &amp;amp; 2 &amp;amp; 1 \\
+    4 &amp;amp; 2 &amp;amp; 6 &amp;amp; 1 &amp;amp; 2 &amp;amp; 3 \\
+    1 &amp;amp; 5 &amp;amp; 1 &amp;amp; 6 &amp;amp; 3 &amp;amp; 2 \\
+    2 &amp;amp; 2 &amp;amp; 2 &amp;amp; 3 &amp;amp; 6 &amp;amp; 3 \\
+    3 &amp;amp; 1 &amp;amp; 3 &amp;amp; 2 &amp;amp; 3 &amp;amp; 6
+\end{bmatrix}
+$$&lt;/div&gt;
+&lt;p&gt;The alliance matrix is symmetric (&lt;span class="math"&gt;\(a_{ts} = a_{st}\)&lt;/span&gt;) with nonnegative entries.  The diagonal entries &lt;span class="math"&gt;\(a_{tt}\)&lt;/span&gt; count the number of matches Team &lt;span class="math"&gt;\(t\)&lt;/span&gt; has played.  Qualification scores &lt;span class="math"&gt;\(y \in \R^T\)&lt;/span&gt; can be computed by multiplying the OPR vector &lt;span class="math"&gt;\(\theta \in \R^T\)&lt;/span&gt; by the alliance matrix &lt;span class="math"&gt;\(A \in \R^{T \times T}\)&lt;/span&gt; as follows:
+&lt;/p&gt;
+&lt;div class="math"&gt;$$
+A\theta = y
+$$&lt;/div&gt;
+&lt;h2&gt;Computations&lt;/h2&gt;
+&lt;h3&gt;Offensive Power Rating&lt;/h3&gt;
+&lt;p&gt;Since we know both the alliance matrix &lt;span class="math"&gt;\(A\)&lt;/span&gt; and the qualification scores &lt;span class="math"&gt;\(y\)&lt;/span&gt;, we can estimate the offensive power ratings &lt;span class="math"&gt;\(\theta\)&lt;/span&gt; by solving a &lt;strong&gt;system of linear equations&lt;/strong&gt;.  Before enough matches have been played, the solution will not be unique, and we use &lt;strong&gt;Gauss-Seidel&lt;/strong&gt; to report a least-squares estimate.  Since the score breaks down into three phases, &lt;span class="math"&gt;\(y = y_{AP} + y_{CP} + y_{TP}\)&lt;/span&gt;, we also estimate OPR scores &lt;span class="math"&gt;\(\theta_{AP}\)&lt;/span&gt;, &lt;span class="math"&gt;\(\theta_{CP}\)&lt;/span&gt;, and &lt;span class="math"&gt;\(\theta_{TP}\)&lt;/span&gt; for each phase.&lt;/p&gt;
+&lt;h3&gt;Defensive Power Rating&lt;/h3&gt;
+&lt;p&gt;The &lt;strong&gt;defensive power rating (DPR)&lt;/strong&gt; for a team is calculated by iterating through the list of completed matches and using the calculated OPR values to predict the outcome of each match. For each match, for both alliances, the difference between this expected outcome and the true outcome of the match is credited to the defensive utility of the opposing alliance. For each team, we sum up these differences and solve a linear system similar to the one above using this new tabulated data.  Note that a team's DPR can be negative!&lt;/p&gt;
+&lt;h3&gt;Calculated Contribution to Winning Margin&lt;/h3&gt;
+&lt;p&gt;The &lt;strong&gt;calculated contribution to winning margin (CCWM)&lt;/strong&gt; for each team is calculated by summing up the alliance score difference for each team for each match and solving our favorite system of linear equations for the x vector with these margins in our b vector.  Note that CCWM can be negative for a team if its allies consistently do worse than expected!&lt;/p&gt;
+&lt;h1&gt;Conclusion&lt;/h1&gt;
+&lt;p&gt;As they say, all models are wrong--and ours is especially wrong!  In particular, a team's ability to score points is assumed to be independent of the defensive prowess of the opposing team.  Nevertheless, we found that OPR successfully predicts the winner for between 80-90% of matches.  Incorporating DPR yields a marginal improvement.&lt;/p&gt;
+&lt;p&gt;Our scouts used AASK throughout the 2013 season to automate data collection and to inform the alliance selection process.  During competitions, it was always exciting to compare early predictions against the final results.  By comparing against data collected manually, we also noticed some interesting patterns:&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Due to the structure of the game, robots tend not to collaborate or interfere too much with one another during the autonomous and climbing phases of the game.  As a result, AASK is remarkably accurate at predicting scores for these two phases.&lt;/li&gt;
+&lt;li&gt;Scores were generally higher on the second day of competitions than on the first, which we attribute to drivers' skill improving as they get more practice on the field.&lt;/li&gt;
+&lt;/ul&gt;</content><category term="linear-algebra"></category><category term="robotics"></category></entry><entry><title>Complex Domain Coloring</title><link href="http://benrbray.com/posts/2014/complex-domain-coloring" rel="alternate"></link><published>2014-02-15T00:00:00-05:00</published><updated>2014-02-15T00:00:00-05:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2014-02-15:/posts/2014/complex-domain-coloring</id><summary type="html">&lt;p&gt;Complex domain coloring implemented with JavaScript / Canvas.&lt;/p&gt;</summary><content type="html">&lt;p&gt;Real-valued functions &lt;span class="math"&gt;\(f : \R \rightarrow \R\)&lt;/span&gt; with real inputs can be easily visualized on a two-dimensional graph.  Real-valued complex functions &lt;span class="math"&gt;\(f : \C \rightarrow \R\)&lt;/span&gt; have two input dimensions and one output dimension, so can be visualized as a three-dimensional surface.  Functions &lt;span class="math"&gt;\(f : \C \rightarrow \C\)&lt;/span&gt; with both complex inputs and complex outputs have four dimensions to consider, making them difficult to visualize directly.  One popular visualization technique for complex functions is &lt;strong&gt;domain coloring&lt;/strong&gt;, which uses color to represent the value a function takes at each point in the complex plane.  Domain coloring can help us build visual intuition about complex analysis.&lt;/p&gt;</content><category term="math"></category><category term="complex-analysis"></category><category term="image-processing"></category></entry></feed>

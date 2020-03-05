@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Benjamin R. Bray - calculus, optimization, numerical-methods</title><link href="http://benrbray.com/" rel="alternate"></link><link href="http://localhost:8000/feeds/calculus-optimization-numerical-methods.atom.xml" rel="self"></link><id>http://benrbray.com/</id><updated>2019-08-21T00:00:00-04:00</updated><entry><title>Newton's Method, Optimization, and Root-finding</title><link href="http://benrbray.com/posts/2019/newtons-method-optimization-and-root-finding" rel="alternate"></link><published>2019-08-21T00:00:00-04:00</published><updated>2019-08-21T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2019-08-21:/posts/2019/newtons-method-optimization-and-root-finding</id><summary type="html">&lt;p&gt;There are two versions of Newton's method, one for root-finding, &lt;span class="math"&gt;\(f(x) = 0\)&lt;/span&gt;, and one for optimization, &lt;span class="math"&gt;\(min_{x \in \R^n} f(x)\)&lt;/span&gt;.  In this post, I show explicitly that Newton's method for optimization is simply Newton's method applied to finding fixed points of the gradient map &lt;span class="math"&gt;\(x \mapsto \nabla x f\)&lt;/span&gt;.&lt;/p&gt;</summary><content type="html">&lt;h1&gt;Newton's Method for Root-finding&lt;/h1&gt;
+&lt;div class="math"&gt;$$
+x_{t+1} \equiv x_t - \frac{f(x_t)}{f'(x_t)}
+$$&lt;/div&gt;
+&lt;h1&gt;Newton's Method for Optimization&lt;/h1&gt;
+&lt;p&gt;Now, suppose we wish to minimize a function &lt;span class="math"&gt;\(f : \R \rightarrow \R\)&lt;/span&gt;.  The standard approach looks for &lt;strong&gt;stationary points&lt;/strong&gt; satisfying the first-order condition &lt;span class="math"&gt;\(f'(x) = 0\)&lt;/span&gt;.  If &lt;span class="math"&gt;\(f\)&lt;/span&gt; is convex (for example), then there is a unique stationary point at the global minimum of &lt;span class="math"&gt;\(f\)&lt;/span&gt;.&lt;/p&gt;
+&lt;p&gt;To find a stationary point, we can apply Newton's method to find roots of the derivative &lt;span class="math"&gt;\(f' : \R \rightarrow \R\)&lt;/span&gt; mapping &lt;span class="math"&gt;\(x \mapsto f'(x)\)&lt;/span&gt;.&lt;/p&gt;
+&lt;div class="math"&gt;$$
+x_{t+1} \equiv x_t - \frac{f'(x_t)}{f''(x_t)}
+$$&lt;/div&gt;
+&lt;p&gt;So, the connection between Newton's method for optimization and root finding in one dimension is clear.  However, in two dimensions, Newton's method for optimization looks like&lt;/p&gt;
+&lt;div class="math"&gt;$$
+x_{t+1} \equiv x_t - (\nabla^2_{x_t} f)^{-1} (\nabla_{x_t} f) 
+$$&lt;/div&gt;
+&lt;h1&gt;Multivariate Newton's Method for Optimization&lt;/h1&gt;
+&lt;p&gt;Now, suppose we want to minimize the multivariate function &lt;span class="math"&gt;\(f : \R^n \rightarrow \R\)&lt;/span&gt;.&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;The derivative evaluated at any &lt;span class="math"&gt;\(x \in \R^n\)&lt;/span&gt; is a linear transformation &lt;span class="math"&gt;\(\nabla_x f : \R^n \rightarrow \R\)&lt;/span&gt;&lt;ul&gt;
+&lt;li&gt;Can be represented by a row vector.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;li&gt;At a critical point, the function &lt;span class="math"&gt;\(\nabla_x f\)&lt;/span&gt; should map every input to zero.&lt;ul&gt;
+&lt;li&gt;i.e. at a critical point &lt;span class="math"&gt;\(\nabla_x f\)&lt;/span&gt; is represented by the zero vector.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/li&gt;
+&lt;/ul&gt;
+&lt;div style="border:1px solid black; padding:20px; margin:20px"&gt;
+&lt;b&gt;Problem:&lt;/b&gt;  Derive a multivariable version of Newton's method for finding critical points of $f : \R^n \rightarrow \R$.
+&lt;ul&gt;
+    &lt;li&gt;(Use the linear approximation interpretation of Newton's root-finding method.)&lt;/li&gt;
+    &lt;li&gt;What assumptions are needed about the function $f$ for this method to work?&lt;/li&gt;
+&lt;/ul&gt;
+&lt;/div&gt;
+
+&lt;h2&gt;Solution&lt;/h2&gt;
+&lt;p&gt;Essentially, we want to find zeros of the map &lt;span class="math"&gt;\(\varphi : \R^n \rightarrow \R^n\)&lt;/span&gt; mapping &lt;span class="math"&gt;\(x \mapsto \nabla_x f\)&lt;/span&gt;.  The linear approximation to &lt;span class="math"&gt;\(\varphi\)&lt;/span&gt; at a point &lt;span class="math"&gt;\(x_t \in \R^n\)&lt;/span&gt; is
+&lt;/p&gt;
+&lt;div class="math"&gt;$$
+\psi(y) = \varphi(x_t) + (\nabla_{x_t} \varphi) (y-x_t)
+$$&lt;/div&gt;
+&lt;p&gt;Since &lt;span class="math"&gt;\(\varphi : \R^n \rightarrow \R^n\)&lt;/span&gt;, its derivative &lt;span class="math"&gt;\(\varphi \in L(\R^n \rightarrow \R^n)\)&lt;/span&gt; can be represented by an &lt;span class="math"&gt;\((n \times n)\)&lt;/span&gt; matrix.  Assume this matrix is invertible.  Choose &lt;span class="math"&gt;\(x_{t+1}\)&lt;/span&gt; to be a root of &lt;span class="math"&gt;\(\psi\)&lt;/span&gt;,&lt;/p&gt;
+&lt;div class="math"&gt;$$
+\begin{aligned}
+\psi(x_{t+1}) = 0 &amp;amp;\implies (\nabla_{x_t} \varphi) (x_{t+1}-x_t) = -\varphi(x_t) \\
+&amp;amp;\implies x_{t+1} - x_t = - (\nabla_{x_t} \varphi)^{-1} \varphi(x_t) \\
+\end{aligned}
+$$&lt;/div&gt;
+&lt;p&gt;Notice that &lt;span class="math"&gt;\(\nabla_{x_t} \varphi\)&lt;/span&gt; is the Hessian of &lt;span class="math"&gt;\(f\)&lt;/span&gt;, and &lt;span class="math"&gt;\(\varphi(x_t)\)&lt;/span&gt; was defined to be the gradient.  Therefore, multivariate Newton's method for optimization has the form&lt;/p&gt;
+&lt;div class="math"&gt;$$
+x_{t+1} = x_t - (\nabla^2_{x_t} f)^{-1} (\nabla_{x_t} f)
+$$&lt;/div&gt;
+&lt;h1&gt;Bonus: Newton's Method for Vector-valued Functions&lt;/h1&gt;
+&lt;p&gt;TODO&lt;/p&gt;</content></entry></feed>

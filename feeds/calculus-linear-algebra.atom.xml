@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Benjamin R. Bray - calculus, linear-algebra</title><link href="http://benrbray.com/" rel="alternate"></link><link href="http://localhost:8000/feeds/calculus-linear-algebra.atom.xml" rel="self"></link><id>http://benrbray.com/</id><updated>2019-08-20T00:00:00-04:00</updated><entry><title>Gradients are Row Vectors (and you can too!)</title><link href="http://benrbray.com/posts/2019/gradients-are-row-vectors-and-you-can-too" rel="alternate"></link><published>2019-08-20T00:00:00-04:00</published><updated>2019-08-20T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2019-08-20:/posts/2019/gradients-are-row-vectors-and-you-can-too</id><summary type="html">&lt;p&gt;Mathematicians tend to agree that gradients are row vectors, but for some reason computer scientists can't get on borad with the idea.  The goal of this post is to explain why gradients are most naturally expressed as row vectors, and to demonstrate the advantages of this perspective.&lt;/p&gt;</summary><content type="html">&lt;div class="math"&gt;$$
+\newcommand{\grad}{\nabla}
+$$&lt;/div&gt;
+&lt;p&gt;In this post, we will explore the following question:&lt;/p&gt;
+&lt;blockquote&gt;
+&lt;p&gt;Should the gradient of a function &lt;span class="math"&gt;\(F: \R^n \rightarrow \R\)&lt;/span&gt; be a row or column vector?&lt;/p&gt;
+&lt;/blockquote&gt;
+&lt;p&gt;The answer is quite controversial depending on who you ask!  Mathematicians tend to agree that gradient sshould be row vectors, but for some reason computer scientists can't get on board with the idea.  &lt;/p&gt;
+&lt;p&gt;The &lt;a href="https://en.wikipedia.org/wiki/Matrix_calculus"&gt;matrix calculus entry&lt;/a&gt; on Wikipedia &lt;a href="https://en.wikipedia.org/wiki/Talk:Matrix_calculus"&gt;endeavors&lt;/a&gt; to remain neutral, suggesting that perhaps the choice is inconsequental and both conventions have their merits.  &lt;strong&gt;Wrong!&lt;/strong&gt;  I claim that the gradient-as-column-vector dogma prevalent in computer science is actively holding us back from a deeper understanding of derivatives!&lt;/p&gt;
+&lt;h1&gt;Derivatives and Linear Maps&lt;/h1&gt;
+&lt;p&gt;&lt;strong&gt;Def:&lt;/strong&gt; (One dimension) The function &lt;span class="math"&gt;\(f : \R \rightarrow \R\)&lt;/span&gt; is differentiable at &lt;span class="math"&gt;\(x \in \R\)&lt;/span&gt; if the following limit exists:
+    &lt;/p&gt;
+&lt;div class="math"&gt;$$
+    f'(x) \equiv \lim_{h \rightarrow 0} \frac{f(x+h)-f(x)}{h}
+    $$&lt;/div&gt;
+&lt;p&gt;Notice that if &lt;span class="math"&gt;\(f'(x) = 0\)&lt;/span&gt; exists, then it must satisfy&lt;/p&gt;
+&lt;div class="highlight"&gt;&lt;pre&gt;&lt;span&gt;&lt;/span&gt;&lt;span class="err"&gt;$$&lt;/span&gt;
+&lt;span class="err"&gt;\begin{align}&lt;/span&gt;
+&lt;span class="err"&gt;f&amp;#39;(x) \equiv \lim_{h \rightarrow 0} \frac{f(x+h)-f(x)}{h}&lt;/span&gt;
+&lt;span class="err"&gt;&amp;amp;\iff&lt;/span&gt;
+&lt;span class="err"&gt;\lim_{h \rightarrow 0} {f(x+h) - f(x) - hf&amp;#39;(x)}{h} = 0&lt;/span&gt;
+&lt;span class="err"&gt;\end{align}&lt;/span&gt;
+&lt;span class="err"&gt;$$&lt;/span&gt;
+&lt;/pre&gt;&lt;/div&gt;
+
+
+&lt;p&gt;An equivalent definition is&lt;/p&gt;
+&lt;p&gt;&lt;strong&gt;Def:&lt;/strong&gt; (One dimension) The function &lt;span class="math"&gt;\(f : \R \rightarrow \R\)&lt;/span&gt; is differentiable at &lt;span class="math"&gt;\(x \in \R\)&lt;/span&gt; if there exists a scalar &lt;span class="math"&gt;\(a \in \R\)&lt;/span&gt;&lt;/p&gt;
+&lt;p&gt;One can show that if such an &lt;span class="math"&gt;\(a \in \R\)&lt;/span&gt; exists, it is unique.  So we can unambiguously use the notation &lt;span class="math"&gt;\(f'(x)\)&lt;/span&gt; to refer to the unique derivative of &lt;span class="math"&gt;\(f\)&lt;/span&gt; at &lt;span class="math"&gt;\(a\)&lt;/span&gt;.&lt;/p&gt;
+&lt;h1&gt;Bonus:  Differentiation as a Functor&lt;/h1&gt;
+&lt;p&gt;Differentiation is a functor!&lt;/p&gt;</content></entry></feed>

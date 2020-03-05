@@ -15,11 +15,15 @@
 	<!-- Site Styles -->
 	<link rel="stylesheet" href="http://benrbray.com/theme/css/style.css" type="text/css">
 	<link rel="stylesheet" href="http://benrbray.com/theme/css/pygments.css" type="text/css">
+	<!-- Viewport Meta Tag for Mobile Site -->
+	<!-- https://developer.mozilla.org/en-US/docs/Mozilla/Mobile/Viewport_meta_tag) -->
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
 	<!-- KaTeX -->
 	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0-beta/dist/katex.min.css" integrity="sha384-9tPv11A+glH/on/wEu99NVwDPwkMQESOocs/ZGXPoIiLE8MU/qkqUcZ3zzL+6DuH" crossorigin="anonymous">
-    <!-- The loading of KaTeX is deferred to speed up page rendering -->
+	<!-- The loading of KaTeX is deferred to speed up page rendering -->
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.10.0-beta/dist/katex.min.js" integrity="sha384-U8Vrjwb8fuHMt6ewaCy8uqeUXv4oitYACKdB0VziCerzt011iQ/0TqlSlv8MReCm" crossorigin="anonymous"></script>
-    <!-- To automatically render math in text elements, include the auto-render extension: -->
+	<!-- To automatically render math in text elements, include the auto-render extension: -->
     <script defer src="https://cdn.jsdelivr.net/npm/katex@0.10.0-beta/dist/contrib/auto-render.min.js" integrity="sha384-aGfk5kvhIq5x1x5YdvCp4upKZYnA8ckafviDpmWEKp4afOZEqOli7gqSnh8I6enH" crossorigin="anonymous"
 		onload='renderMathInElement(document.body, {
 			delimiters : [
@@ -31,8 +35,101 @@
 				"\\X" : "\\mathcal{X}",
 				"\\L" : "\\mathcal{L}",
 				"\\R" : "\\mathbb{R}",
+				"\\C" : "\\mathbb{C}",
 			}
 		});'></script>
+<style>
+/* About Me */
+
+#about-box {
+	display: grid;
+	grid-row-gap: 0.5rem;
+	grid-column-gap: 1.0rem;
+	align-items: center;
+	
+	max-width: var(--max-width);
+	min-width: var(--min-width);
+
+	margin: 0 auto;
+	box-sizing: border-box;
+	padding: 1em;
+}
+
+#about-container {
+	background-color: #dfedff;/*#dedede*/;
+}
+
+@media (min-width: 40rem) {
+	#about-box {
+		grid: auto 1fr / auto 1fr;
+		grid-template-areas:
+		"img text"
+		"info text";
+	}
+	#ben-photo {
+		justify-self: center;
+	}
+}
+
+@media (max-width: 40rem) {
+	#about-box {
+		grid: auto 1fr / 1fr 1fr;
+		grid-template-areas: 
+			"img info"
+			"text text";
+	}
+	#about-info {
+		align-self: center;
+	}
+	#ben-photo {
+		justify-self: right;
+	}
+}
+
+#about-info {
+	grid-area: info;
+	list-style: none;
+	margin: 0 0 0 1em;
+	padding: 0;
+}
+
+#about-info li.social a {
+	font-weight: 100;
+	font-family: monospace;
+	color: #444;
+}
+
+#about-info li.social img {
+	display: inline-block;
+	max-width: 14px;
+	max-height: 14px;
+	margin-right: 0.5em;
+	text-align: center;
+	vertical-align: middle;
+}
+
+#ben-photo {
+	grid-area: img;
+	width: 140px;
+	height: 140px;
+	border: 2px solid #5a97e6;
+	border-radius: 50%;
+}
+
+#about-text {
+	grid-area: text;
+	text-align: justify;
+}
+
+#about-text p:first-child {
+	margin-top: 0;
+}
+
+h2 {
+	font-size: 1.4em;
+	margin-top: 2em;
+}
+</style>
 </head>
 
 <body>
@@ -41,16 +138,41 @@
 
 <!-- HEADER -->
 <div id="header-box">
-	<div id="header">
-	<a id="header-name" href="http://benrbray.com/">
-		Benjamin R. Bray
-	</a><ul id="header-nav">
+	<nav id="header">
+	<ul id="header-nav">
+		<li>
+			<a id="header-name" href="http://benrbray.com/">Benjamin R. Bray</a>
+		</li>
 		<li><a href="/blog">WRITING</a></li>
 		<li><a href="/projects">PROJECTS</a></li>
 		<li><a href="/resources">RESOURCES</a></li>
 		<li><a href="/resume.pdf">RESUME</a></li>
 	</ul>
+	</nav>
+</div>
+
+<!-- PRECONTENT -->
+<div id="pre-content">
+<!-- ABOUT ME -->
+<div id="about-container"><div id="about-box">
+	<img id="ben-photo" src="http://benrbray.com/theme/images/ben-160px.jpg"></img>
+	<ul id="about-info">
+		<li class="social"><img src="http://benrbray.com/theme/icons/resume-14px-black.png"></img><a href="http://benrbray.com/resume">resume</a></li class="social">
+		<li class="social">
+			<img src="http://benrbray.com/theme/icons/github-14px-black.png"></img><a href="https://github.com/benrbray">github</a>
+		</li>
+		<li class="social"><img src="http://benrbray.com/theme/icons/linkedin-14px-black.png"></img><a href="https://www.linkedin.com/in/benrbray/">linkedin</a></li>
+		<li class="social"><img src="http://benrbray.com/theme/icons/ng-bw.ico"></img><a href="https://archawn.newgrounds.com/">newgrounds</a></li class="social">
+		<li class="social"><img src="http://benrbray.com/theme/icons/mail-14px-black.png"></img><a href="mailto:benrbray@gmail.com">gmail</a></li class="social">
+	</ul>
+	<div id="about-text">
+		<p>I recently obtained a Masters in Computer Science from <b>Georgia Tech</b>.  I'm currently seeking <b>full-time opportunities</b>, so check out my <a href="http://benrbray.com/resume">resume</a>!  My interests include computer graphics, numerical methods, and machine learning.  My research advisor was <a href="https://www.cc.gatech.edu/~jabernethy9/">Jacob Abernethy</a>. 
+		
+		<p>Previously, I studied math at the University of Michigan, where I also helped with a machine learning <a href="https://eecs445-f16.github.io/">class</a> and <a href="http://msail.github.io/">reading group</a>.  Off-campus I like to bike, cook, and play piano.  Maybe one day I'll make more <a href="http://www.newgrounds.com/portal/view/512482">games</a>.
+		
+		<p>If you'd like to chat, feel free to write me at <a href="mailto:benrbray@gmail.com">benrbray@gmail.com</a>.
 	</div>
+</div></div>
 </div>
 
 <div id="page">
@@ -58,74 +180,103 @@
 	<!-- CONTENT -->
 	<div id="content">
 
-<!-- ABOUT ME -->
-<div id="about-box">
-    <div id="about-info">
-        <img src="http://benrbray.com/theme/images/ben-160px.jpg" style="width: 160px; height: 160px; border-radius: 100px; margin: 0 10px;">
-    </div>
-    <div id="about-text">
-	    <p style="margin-top: 5px">I recently graduated from <b>Georgia Tech</b> with a masters in Computer Science, with a focus on high performance computing and machine learning.  I'm currently looking for a full-time position, so check out my <a href="http://benrbray.com/resume">resume</a>!  My interests include computer graphics, parallel computing, and machine learning.
-            
-        <p>Previously, I studied math at the University of Michigan, where I also helped with a machine learning <a href="https://eecs445-f16.github.io/">class</a> and <a href="http://msail.github.io/">reading group</a>.  Off-campus I like to bike, cook, and play piano.  Maybe one day I'll make more <a href="http://www.newgrounds.com/portal/view/512482">games</a>.
-        
-        <p>If you'd like to chat, feel free to write me at <a href="mailto:benrbray@gmail.com">benrbray@gmail.com</a>.
-    </div>
-</div>
-
 <!-- Recent Updates -------------------------------------------------------- -->
-<h1>Recent Updates</h1>
+<h2>Recent Updates</h2>
 
 <table>
-    <colgroup>
-        <col style="width:120px">
-    </colgroup>
-    <tr>
-        <td><b>Fall 2019</b></td>
-        <td>Teaching assistant for <a href="https://cs4540-f19.github.io/">CS 4540: Advanced Algorithms (F19)</a></td>
-    </tr>
-    <tr>
-        <td><b>July 2019</b></td>
-        <td>Attended the <a href="http://www.cas.mcmaster.ca/~deza/tokyo2019progr.html">Discrete Optimization & Machine Learning
-            Workshop</a> at RIKEN AIP</td>
-    </tr>
-    <tr>
-        <td><b>Summer 2019</b></td>
-        <td>Internship at <a href="http://www.riken.jp/en/research/labs/aip/">RIKEN AIP</a> in Tokyo on the <a href="https://emtiyaz.github.io/#research">Approximate Bayesian Inference</a> team</td>
-    </tr>
-    <tr>
-        <td><b>May 2019</b></td>
-        <td>Earned MS in Computer Science (High Performance Computing) at Georgia Tech</td>
-    </tr>
-    <tr>
-        <td><b>Fall 2018</b></td>
-        <td>Teaching assistant for <a href="https://cs4540-f18.github.io/">CS 4540: Advanced Algorithms (F18)</a></td>
-    </tr>
-    <tr>
-        <td><b>May 2018</b></td>
-        <td>Visited the <a href="https://www.mccormick.northwestern.edu/eecs/computer-science/online-markets.html">Data
-                Science &amp; Online
-                Markets</a> group at Northwestern</td>
-    </tr>
+	<colgroup>
+		<col style="width:8em">
+	</colgroup><tr>
+		<td><b>Spring 2020</b></td>
+		<td>Teaching assistant for ISYE 6740: Computational Data Analysis with Prof. Yao Xie</td>
+	</tr>
+	<tr>
+		<td><b>Fall 2019</b></td>
+		<td>Teaching assistant for <a href="https://cs4540-f19.github.io/">CS 4540: Advanced Algorithms</a> with Prof. Jacob Abernethy</td>
+	</tr>
+	<tr>
+		<td><b>August 2019</b></td>
+		<td>Received <b>MS in Computer Science (High Performance Computing)</b> from Georgia Tech</td>
+	</tr>
+	<tr>
+		<td><b>July 2019</b></td>
+		<td>Attended the <a href="http://www.cas.mcmaster.ca/~deza/tokyo2019progr.html">Discrete Optimization & Machine Learning
+			Workshop</a> at RIKEN AIP</td>
+	</tr>
+	<tr>
+		<td><b>Summer 2019</b></td>
+		<td>Internship at <a href="http://www.riken.jp/en/research/labs/aip/">RIKEN AIP</a> in Tokyo on the <a href="https://emtiyaz.github.io/#research">Approximate Bayesian Inference</a> team</td>
+	</tr>
+	<tr>
+		<td><b>Fall 2018</b></td>
+		<td>Teaching assistant for <a href="https://cs4540-f18.github.io/">CS 4540: Advanced Algorithms (F18)</a></td>
+	</tr>
+	<tr>
+		<td><b>May 2018</b></td>
+		<td>Visited the <a href="https://www.mccormick.northwestern.edu/eecs/computer-science/online-markets.html">Data
+				Science &amp; Online
+				Markets</a> group at Northwestern</td>
+	</tr>
 </table>
 
-<h1>Selected Writing</h1>
+<h2>Projects</h2>
 
-<div class="post-box">
-    <a class="post-title" href="posts/2018/May/02/algorithms-for-random-discrete-structures">Algorithms for Random Discrete Structures</a>
-    <span class="post-date">Wed, 02 May 2018.</span> <p>Many applications require the random sampling of matrices with prescribed structure for modeling, statistical, or aesthetic purposes.  What does it mean for a random variable to be matrix-valued?  What can we say about the eigenvalues of a random matrix?  How can we design algorithms to sample from a target distribution on a group or manifold?  More generally, what can we say deterministic algorithms with random inputs?  Our study of random matrices will lead us to the <em>subgroup algorithm</em> (Diaconis 1987), which subsumes many familiar random sampling procedures.</p>
+<div class="project-container">
+	<a class="project-box" href="posts/2016/digital-humanities-german-periodicals">
+		<!-- Thumbnail -->
+		<div class="project-thumb">
+		<img src="images/thumbnails/deutsche-rundschau_thumb.png"></img>
+		</div>
+		<!-- Title -->
+		<div class="project-title"><p>Digital Humanities &amp; German&nbsp;Periodicals</p></div>
+	</a>
+	<a class="project-box" href="posts/2014/seam-carving">
+		<!-- Thumbnail -->
+		<div class="project-thumb">
+		<img src="images/thumbnails/seam-carve_thumb.png"></img>
+		</div>
+		<!-- Title -->
+		<div class="project-title"><p>Seam Carving</p></div>
+	</a>
+	<a class="project-box priority-1" href="posts/2014/code-diff">
+		<!-- Thumbnail -->
+		<div class="project-thumb">
+		<img src="images/misc/rect7.PNG"></img>
+		</div>
+		<!-- Title -->
+		<div class="project-title"><p>Code Diff</p></div>
+	</a>
+	<a class="project-box" href="posts/2014/adambots-automated-scouting-kit">
+		<!-- Thumbnail -->
+		<div class="project-thumb">
+		<img src="images/thumbnails/aask_thumb.png"></img>
+		</div>
+		<!-- Title -->
+		<div class="project-title"><p>AdamBots Automated&nbsp;Scouting&nbsp;Kit</p></div>
+	</a>
+	<a class="project-box priority-1" href="posts/2014/complex-domain-coloring">
+		<!-- Thumbnail -->
+		<div class="project-thumb">
+		<img src="images/thumbnails/complex-domain-coloring_thumb.png"></img>
+		</div>
+		<!-- Title -->
+		<div class="project-title"><p>Complex Domain Coloring</p></div>
+	</a>
 </div>
-<div class="post-box">
-    <a class="post-title" href="posts/2017/Jun/17/collision-detection-with-the-separating-axis-theorem">Collision Detection with the Separating Axis Theorem</a>
-    <span class="post-date">Sat, 17 Jun 2017.</span> <p>In geometry, the hyperplane separation theorem is a theorem about disjoint convex sets in n-dimensional Euclidean space. There are several rather similar versions. In one version of the theorem, if both these sets are closed and at least one of them is compact, then there is a hyperplane in between them and even two parallel hyperplanes in between them separated by a gap. In another version, if both disjoint convex sets are open, then there is a hyperplane in between them, but not necessarily any gap. An axis which is orthogonal to a separating hyperplane is a separating axis, because the orthogonal projections of the convex bodies onto the axis are disjoint.</p>
-</div>
-<div class="post-box">
-    <a class="post-title" href="posts/2015/Nov/26/expectation-maximization">Expectation Maximization</a>
-    <span class="post-date">Thu, 26 Nov 2015.</span> <p>These notes provide a theoretical treatment of <strong>Expectation-Maximization</strong>, an iterative parameter estimation algorithm used to find local maxima of the likelihood function in the presence of hidden variables.  Introductory textbooks (MLAPP, PRML) typically state the algorithm without explanation and expect students to work blindly through derivations.  We find this approach to be unsatisfying, and instead choose to tackle the theory head-on, followed by plenty of examples.  Following (Neal &amp; Hinton 1998), we view expectation-maximization as coordinate ascent on the <strong>Evidence Lower Bound</strong>.  This perspective takes much of the mystery out of the algorithm and allows us to easily derive variants like <strong>Hard EM</strong> and <strong>Variational Inference</strong>.</p>
-</div>
-<div class="post-box">
-    <a class="post-title" href="posts/2015/Aug/21/incompressible-fluid-simulation">Incompressible Fluid Simulation</a>
-    <span class="post-date">Fri, 21 Aug 2015.</span> <p>Simulation of two-dimensional incompressible flow with periodic boundary conditions, achieved by solving the Euler Equations in the frequency domain via the Fast Fourier Transform (FFT).  Written in Java.</p>
-</div>
+
+
+<h2>Selected Writing</h2>
+
+	<div class="post-box">
+		<a class="post-title" href="posts/2018/algorithms-for-random-discrete-structures">Algorithms for Random Discrete Structures</a>
+		<span class="post-date">Wed, 02 May 2018.</span>
+		<p>Many applications require the random sampling of matrices with prescribed structure for modeling, statistical, or aesthetic purposes.  What does it mean for a random variable to be matrix-valued?  What can we say about the eigenvalues of a random matrix?  How can we design algorithms to sample from a target distribution on a group or manifold?  More generally, what can we say deterministic algorithms with random inputs?  Our study of random matrices will lead us to the <em>subgroup algorithm</em> (Diaconis 1987), which subsumes many familiar random sampling procedures.</p>
+	</div>
+	<div class="post-box">
+		<a class="post-title" href="posts/2015/expectation-maximization">Expectation Maximization</a>
+		<span class="post-date">Thu, 26 Nov 2015.</span>
+		<p>These notes provide a theoretical treatment of <strong>Expectation-Maximization</strong>, an iterative parameter estimation algorithm used to find local maxima of the likelihood function in the presence of hidden variables.  Introductory textbooks (MLAPP, PRML) typically state the algorithm without explanation and expect students to work blindly through derivations.  We find this approach to be unsatisfying, and instead choose to tackle the theory head-on, followed by plenty of examples.  Following (Neal &amp; Hinton 1998), we view expectation-maximization as coordinate ascent on the <strong>Evidence Lower Bound</strong>.  This perspective takes much of the mystery out of the algorithm and allows us to easily derive variants like <strong>Hard EM</strong> and <strong>Variational Inference</strong>.</p>
+	</div>
 	</div>
 
 	<!-- Page Footer -->
@@ -134,7 +285,7 @@
 			Powered by <a href="http://blog.getpelican.com/">Pelican</a> and hosted on <a href="https://github.com/benrbray/benrbray.github.io-source">GitHub</a>.
 		</span>
 		<span style="float: right">
-			Last updated on October 10, 2018
+			Last updated on March 05, 2020
 		</span>
 	</div>
 </div>

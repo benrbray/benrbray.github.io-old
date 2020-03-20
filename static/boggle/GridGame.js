@@ -222,6 +222,17 @@ export class GridGameElement extends HTMLElement {
 		this.unhighlight();
 	}
 
+	handleInput(evt, rowIdx, colIdx){
+		console.log("boggle :: input ::", evt, rowIdx, colIdx);
+
+		if(!evt.data){ return; }
+
+		handleKeyDown({
+			keyCode: evt.data.charCodeAt(0),
+			preventDefault: () => {}
+		});
+	}
+
 	handleKeyDown(evt){
 		const Key = {
 			BACKSPACE : 8,
@@ -400,6 +411,9 @@ export class GridGameElement extends HTMLElement {
 				);
 				inputElt.addEventListener("focus", 
 					evt => this.handleFocus(rowIdx, colIdx)
+				);
+				inputElt.addEventListener("input", 
+					evt => this.handleInput(evt, rowIdx, colIdx)
 				);
 				rowElement.appendChild(td);
 			}

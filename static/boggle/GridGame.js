@@ -25,7 +25,7 @@ let gridGameTemplate = (()=>{
 			--cell-background-alpha: 1.0;
 			--fade-color: white;
 		}
-		#board {
+		table {
 			margin: auto;
 			border: 2px solid black;
 			user-select: none;
@@ -37,12 +37,12 @@ let gridGameTemplate = (()=>{
 			100% { opacity: 1.0; background-color: black;}
 		}
 		
-		.cell                { --fadex: 1.10; }
-		.cell:nth-child(2n)  { --fadex: 0.90; }
-		.cell:nth-child(3n)  { --fadex: 1.32; }
-		.cell:nth-child(4)   { --fadex: 0.82; }
-		.cell:nth-child(5n)  { --fadex: 1.06; }
-		.cell:nth-child(7n)  { --fadex: 1.14; }
+		td                { --fadex: 1.10; }
+		td:nth-child(2n)  { --fadex: 0.90; }
+		td:nth-child(3n)  { --fadex: 1.32; }
+		td:nth-child(4)   { --fadex: 0.82; }
+		td:nth-child(5n)  { --fadex: 1.06; }
+		td:nth-child(7n)  { --fadex: 1.14; }
 
 		tr               { --fadey:  1.03; }
 		tr:nth-child(2n) { --fadey:  1.11; }
@@ -51,58 +51,40 @@ let gridGameTemplate = (()=>{
 		tr:nth-child(5n) { --fadey:  1.20; }
 		tr:nth-child(7n) { --fadey:  1.03; }
 
-		:host(.loading) .cell input {
+		:host(.loading) td {
 			/* loading animation */
 			animation: flicker calc(1.4s*var(--fadex)*var(--fadey)) ease alternate infinite;
 			animation-delay: calc(-1s * (var(--fadex) + var(--fadey)));
 		}
 
-		.row {
-			display: table-row;
-		}
-
-		.cell {
-			display: table-cell;
+		td {
 			position: relative;
+			box-sizing: border-box;
 			width: var(--cell-size);
 			height: var(--cell-size);
-			box-sizing: border-box;
-		}
-
-		.cell input {
 			text-align: center;
 			vertical-align: middle;
 			border: 1px solid #aaa;
-			box-sizing: border-box;
-
-			position: absolute;
-			top: 0;
-			bottom: 0;
-			width: var(--cell-size);
-			height: var(--cell-size);
-			font-size: 2rem;
-
-			color: inherit;
 
 			background-color: rgba(var(--cell-background-rgb), var(--cell-background-alpha));
 
 			/* Fix Firefox Render Issue (https://stackoverflow.com/a/16337203) */
 			background-clip: padding-box;
 		}
-		.cell input.void {
+		td.void {
 			background-color: black;
 			border: none;
 		}
-		.cell input.disabled {
+		td.disabled {
 			background-color: gray;
 		}
-		.cell input.highlight:not([disabled]) {
+		td.highlight:not([disabled]) {
 			background-color: lightblue;
 		}
-		.cell input:focus, .cell input.highlight:focus {
+		td:focus, td.highlight:focus {
 			background-color: #8cbaca;
 		}
-		.cell input.circled::before {
+		td.circled::before {
 			content: "";
 			box-sizing: border-box;
 			display: block;
@@ -117,10 +99,10 @@ let gridGameTemplate = (()=>{
 			border-radius: 50%;
 		}
 		</style>
-		<div id="board" tabindex="0">
-			<div id="boardBody" style="display:table">
-			</div>
-		</div>`;
+		<table id="board" tabindex="0">
+			<tbody id="boardBody">
+			</tbody>
+		</table>`;
 	return template;
 })();
 
@@ -171,7 +153,7 @@ export class GridGameElement extends HTMLElement {
 			for(let c = 0; c < this.numCols; c++){
 				let cell = this.getCell(r, c);
 				let isVoid = cell.classList.contains("void");
-				row.push( isVoid ? null : cell.value );
+				row.push( isVoid ? null : cell.textContent );
 			}
 			result.push(row);
 		}
@@ -222,17 +204,6 @@ export class GridGameElement extends HTMLElement {
 		this.unhighlight();
 	}
 
-	handleInput(evt, rowIdx, colIdx){
-		console.log("boggle :: input ::", evt, rowIdx, colIdx);
-
-		if(!evt.data){ return; }
-
-		handleKeyDown({
-			keyCode: evt.data.charCodeAt(0),
-			preventDefault: () => {}
-		});
-	}
-
 	handleKeyDown(evt){
 		const Key = {
 			BACKSPACE : 8,
@@ -269,23 +240,23 @@ export class GridGameElement extends HTMLElement {
 		if(evt.keyCode >= 65 && evt.keyCode <= 90){
 			console.log("boggle :: alpha input");
 			let char = String.fromCharCode(evt.keyCode);
-			focusedCell.value = char;
+			focusedCell.textContent = char;
 			focusAction = FocusAction.NEXT;
 		}
 		// handle numeric input
 		if(evt.keyCode >= 48 && evt.keyCode <= 57){
 			console.log("boggle :: numeric input");
 			let char = String.fromCharCode(evt.keyCode);
-			focusedCell.value = char;
+			focusedCell.textContent = char;
 			focusAction = FocusAction.NEXT;
 		}
 		// handle deletion
 		if(evt.keyCode == Key.BACKSPACE){
-			focusedCell.value = "";
+			focusedCell.textContent = "";
 			focusAction = FocusAction.PREV;
 		}
 		if(evt.keyCode == Key.DELETE){
-			focusedCell.value = "";
+			focusedCell.textContent = "";
 			focusAction = FocusAction.NONE;
 		}
 
@@ -386,8 +357,7 @@ export class GridGameElement extends HTMLElement {
 		}
 		// create rows as needed
 		while(this.boardBody.children.length < this.numRows){
-			let tr = document.createElement("div");
-			tr.classList.add("row");
+			let tr = document.createElement("tr");
 			this.boardBody.appendChild(tr);
 		}
 
@@ -400,20 +370,14 @@ export class GridGameElement extends HTMLElement {
 			}
 			// create cols as needed
 			while(rowElement.children.length < this.numCols){
-				let td = document.createElement("div");
-				td.classList.add("cell");
-				let inputElt = document.createElement("input");
-				td.appendChild(inputElt);
+				let td = document.createElement("td");
 				let colIdx = rowElement.children.length;
-				inputElt.setAttribute("tabindex", -1);
-				inputElt.addEventListener("mousedown", 
+				td.setAttribute("tabindex", -1);
+				td.addEventListener("mousedown", 
 					evt => this.handleClick(rowIdx, colIdx)
 				);
-				inputElt.addEventListener("focus", 
+				td.addEventListener("focus", 
 					evt => this.handleFocus(rowIdx, colIdx)
-				);
-				inputElt.addEventListener("input", 
-					evt => this.handleInput(evt, rowIdx, colIdx)
 				);
 				rowElement.appendChild(td);
 			}
@@ -493,7 +457,7 @@ export class GridGameElement extends HTMLElement {
 				let data = boardData.data[r][c];
 				let cell = this.getCell(r,c);
 
-				if(data)          { cell.value = data; }
+				if(data)          { cell.textContent = data; }
 				if(data === null) {
 					cell.classList.add("void");
 					cell.setAttribute("disabled","");
@@ -557,7 +521,7 @@ export class GridGameElement extends HTMLElement {
 	}
 
 	getCell(row, col){
-		return this.boardBody.children[row].children[col].firstChild;
+		return this.boardBody.children[row].children[col];
 	}
 
 	// Selection -----------------------------------------------------

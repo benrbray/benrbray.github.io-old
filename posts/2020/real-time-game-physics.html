@@ -192,6 +192,10 @@ window.onload = function(){
 <!-- PRECONTENT -->
 <div id="pre-content">
 <!-- Article Banner Image -->
+<div class="page-banner">
+	<img src="https://benrbray.com/images/thumbnails/piano-cables.jpg"></img>
+	<div class="banner-comment">Strings inside a Straube Playtona Player Piano (ca 1916)</div>
+</div>
 </div>
 
 <div id="page">
@@ -203,23 +207,16 @@ window.onload = function(){
 
 <!-- Post Header -->
 <header class="article-header">
-	<h1 class="article-title">Seam Carving</h1>
+	<h1 class="article-title">Real-time Game Physics</h1>
 	<div class="article-info">
 		<!-- Date -->
 		<div class="article-date">
-			Posted in projects on December 28, 2014
+			Posted in projects on March 20, 2020
 		</div>
 		<!-- Tags / Tools -->
 			<nav class="article-tags">
-<a href="/tag/image-processing">image-processing</a><a href="/tag/algorithms">algorithms</a>					<a class="tool">javascript</a>
+<a href="/tag/geometry">geometry</a><a href="/tag/game-dev">game-dev</a><a href="/tag/linear-algebra">linear-algebra</a>					<a class="tool">typescript</a>
 			</nav>
-	</div>
-	<div class="article-buttons">
-		<!-- Demo URL -->
-		<a class="article-button demo" href=/static/seam-carving/index.html><div>LIVE DEMO</div></a>
-		<!-- GitHub URL -->
-		<a class="article-button github" href=https://github.com/benrbray/benrbray.github.io-source/tree/master/content/static/seam-carving><div>GITHUB</div></a>
-		<!-- PDF URL -->
 	</div>
 </header>
 
@@ -229,67 +226,27 @@ window.onload = function(){
 <!-- Post Context -->
 <div class="article-content">
 	<div id="post-body">
-	<style>
-figure {
-    position: relative;
-}
-
-.eqheight {
-    display: flex;
-    width: 100%;
-    align-content: center;
-    justify-content: center;
-}
-
-.eqheight img {
-    max-width: 100%;
-}
-
-.eqheight div {
-    padding: 0.2em;
-}
-
-#seam-algorithm {
-    display: grid;
-    align-items: center;
-    grid: 1fr / 5fr 3fr;
-    grid-auto-flow: row;
-    grid-gap: 1em;
-}
-</style>
-
-<p><a href="https://en.wikipedia.org/wiki/Seam_carving">Seam Carving</a> is a classic dynamic programming algorithm for content-aware image resizing.  Rather than scaling or cropping, the seam carving algorithm resizes images by removing (or copying) horizontal and vertical slices of the image.  These slices, called <em>seams</em>, must cross the entire image, but are allowed to zig and zag around salient regions in order to avoid too much deformation.  </p>
-<p>Below, the image to the left was resized using my <a href="/static/seam-carving/index.html">seam carving demo</a> to produce the image on the right.  Images of hot-air balloons are practically the best-case scenario for seam carving, since the salient objects in the image (balloons!) are mostly surrounded by empty space.  Click the link to try it out for yourself, in real-time, on a variety of test images!</p>
-<figure>
-    <div class="eqheight">
-        <div>
-        <img src="/static/seam-carving/img/balloons.png"></div>
-        <div><img src="/static/seam-carving/results/balloons-after.png"></div>
-    </div>
-</figure>
-
-<p>Seam carving was first introduced by <strong>[Avidan &amp; Shamir 2007]</strong> at SIGGRAPH.  Due to its simplicity and effectiveness, the algorithm has since made its way into computer science textbooks as well as commercial photo editing software.  To me, this technique is quite refreshing, and serves as a reminder that not all problems require a deep neural network!</p>
-<blockquote class="citation">
-Avidan, Shai, and Ariel Shamir. <a href="http://www.faculty.idc.ac.il/arik/SCWeb/imret/index.html">"Seam carving for content-aware image resizing."</a> In ACM SIGGRAPH 2007 papers, pp. 10-es. 2007.
-</blockquote>
-
-<p>Typically, seam carving implementations alternate between taking horizontal and vertical slices to reduce the height and width of an image.  For width reduction, the algorithm works in several phases:</p>
-<figure id="seam-algorithm">
-    <div>
-    1. <b>Energy Computation.</b>  Assign an *importance* value to each pixel in the image.  Common choices for the energy function include gradient magnitude, entropy, and visual salience.
-    </div>
-    <img src="/static/seam-carving/results/balloons-salience.png">
-    <div>
-    2. <b>Downward Accumulation.</b>  In a dynamic programming implementation of seam carving, the downward accumulation phase keeps track of, for each pixel, the value of the *minimum* energy path from this pixel to the top of the image.
-    </div>
-    <img src="/static/seam-carving/results/balloons-energy.png">
-    <div>
-    3. <b>Backtracking & Seam Removal.</b> Once downward accumulation is complete, a backtracking algorithm is recovers the lowest-energy seams for each pixel in the bottom row of the image.  The seams with the lowest energy are removed from the image.
-    </div>
-    <img src="/static/seam-carving/results/balloons-seams.png">
-</figure>
-
-<p>Vertical resizing follows an analogous procedure.  To increase the dimensions of an image, low-energy seams are <em>duplicated</em> instead of removed.  Further variations exist for efficiently removing many seams simultanously, for intelligently cropping after no low-energy seams remain, and even for <a href="https://www.youtube.com/watch?v=Ug2aDccYN3c">seam-carving videos</a>!</p>
+	<p>Collision Detection</p>
+<ul>
+<li>Part 1:  Convex Geometry</li>
+<li><a href="/posts/2018/collision-detection-minkowski-sum">Part 2:  Minkowski Sum</a></li>
+<li><a href="/posts/2017/collision-detection-separating-axis-theorem">Part 3:  Separating Axis Theorem</a></li>
+<li><a href="/posts/2020/collision-detection-gjk-epa">Part 4:  Gilbert-Johnson-Keerthi Algorithm</a></li>
+<li>Part 5:  Expanding Polytope Algorithm</li>
+</ul>
+<p>Real-time Game Physics</p>
+<ul>
+<li>Part 6: Physics Engine Pipeline</li>
+<li>Part 7: Time Steps &amp; Numerical Integration</li>
+<li>Part 8: Impulse-based Physics &amp; Sequential Impulse</li>
+<li>Part 9: Constraint-based Physics</li>
+<li>Part 10: Considerations for Real-time Physics</li>
+<li>Part 11: Continuous Collision Detection</li>
+</ul>
+<p>Practical Game Physics</p>
+<ul>
+<li>Part 12: Bounding Volume Hierarchies</li>
+</ul>
 	</div>
 </div>
 

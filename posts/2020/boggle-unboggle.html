@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html>
+<html lang="en">
 <head>
     <!-- Metadata -->
 	<meta charset="utf-8">
@@ -9,7 +9,7 @@
 	<title>Benjamin R. Bray</title>
 
 	<!-- Google Fonts -->
-	<link href="https://fonts.googleapis.com/css?family=Droid+Sans+Mono|Droid+Serif" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css?family=Droid+Sans+Mono%7CDroid+Serif" rel="stylesheet">
 	<link href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i" rel="stylesheet">
 	<!-- Site Styles -->
 	<link rel="stylesheet" href="https://benrbray.com/theme/css/style.css" type="text/css">
@@ -219,8 +219,8 @@ window.onload = function(){
 	</div>
 	<div class="article-buttons">
 		<!-- Demo URL -->
-		<a class="article-button demo" href=/static/boggle/boggle.html><div>LIVE DEMO</div></a>
 		<!-- GitHub URL -->
+		<a class="article-button github" href=https://github.com/benrbray/boggle-unboggle><div>GITHUB</div></a>
 		<!-- PDF URL -->
 	</div>
 </header>
@@ -233,84 +233,302 @@ window.onload = function(){
 	<div id="post-body">
 	
 
+<!-- TODO: import from file? -->
+<!-- Boggle Style -->
 <style>
-grid-game {
+
+/* ==== BOGGLE ============================================================== */
+
+#boggle {
+	display: grid;
+	position: relative;
+	
+	grid-gap: 1rem;
+	grid: "controls words" auto
+	      "board words" 1fr
+		  "solve words" auto
+		  / auto 1fr;
+}
+
+#boggle-controls { grid-area: controls; }
+#boggle-solve    { grid-area: solve;    }
+#boggle-board    { grid-area: board;    }
+#boggle-list     { grid-area: words;    }
+
+#boggle-list {
+	position: absolute;
+	max-height: 100%;
+	overflow-y: auto;
+}
+
+.wordList {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+}
+
+.wordList span {
+	flex: 1;
+	padding: 2px 0.5em;
+	margin: 0.2em;
+
+	text-align: center;
+	color: darkblue;
+	background-color: lightblue;
+	border: 1px solid darkblue;
+	border-radius: 4px;
+	user-select: none;
+}
+
+.wordList span:hover {
+	background-color: #89bed0;
+}
+
+#boggle-controls {
+	display: grid;
+	grid: auto / 1fr 1fr;
+	grid-auto-flow: row;
+	grid-gap: 0.4em;
+}
+
+#boggle-solve button {
+	font-size: 1.2em;
+	color: white;
+	background-color: #52b955;
+	border: none;
+}
+
+#boggle-solve button:hover {
+	background-color: #479c4a;
+}
+
+#boggle .controls button {
 	display: block;
-	margin: 1em auto;
+	width: 100%;
+	height: 2em;
+}
+
+/* ==== UNBOGGLE ============================================================ */
+
+#unboggle {
+	display: grid;
+	position: relative;
+	
+	grid-gap: 1rem;
+	grid: "board words" 1fr
+		  "solve words" auto
+		  / auto 1fr;
+}
+
+#unboggle-solve { grid-area: solve; }
+#unboggle-board { grid-area: board; }
+#unboggle-words { grid-area: words; }
+
+#unboggle-board {
+	--cell-background-rgb: 0,0,0;
+	background-color: black;
+	color: white;
+}
+
+#unboggle-input {
+	width: 100%;
+	height: 100%;
+	font-size: 1.2em;
+}
+
+#unboggle-solve button {
+	font-size: 1.2em;
+	color: #52b955;
+	width: 100%;
+	height: 2em;
+	background-color: white;
+	border: 2px solid #52b955;
+}
+
+#unboggle-solve button:hover {
+	background-color: #eee;
+}
+
+#unboggle-button.stop {
+	border-color: red;
+	color: red;
+	background-color: white;
+}
+
+#unboggle-container {
+	position: relative;
+}
+
+#unboggle-overlay {
+	display: none;
+	position: relative;
+	grid-area: board;
+	background-color: rgba(255,255,255,0.5);
+	z-index: 1;
 }
 
 #crossword {
+	display: block;
 	font-size: 1rem;
+	margin: 1em auto;
+}
+
+.checkboxes {
+	display: grid;
+	grid: 1fr / 1fr 1fr;
+	grid-gap: 1px;
+	background-color: #999;
+	border: 1px solid #999;
+}
+
+.checkboxes input {
+	display: none;
+	position: absolute;
+	pointer-events: none;
+
+	background: transparent;
+	border-radius: 0px;
+	padding: 5px;
+	box-shadow: none!important;
+}
+.checkboxes input[type="radio"]:checked + span {
+	background-color: lightblue;
+	color: darkblue;
+}
+
+.checkboxes label {
+	background-color: white;
+	text-align: center;
+	user-select: none;
+}
+.checkboxes input[type="radio"] + span {
+  display: block;
+  padding: 5px 10px;
 }
 </style>
 
-<!-- Boggle Template -->
-<template id="grid-game-template">
-	<style>
-	:host {
-		/*all: initial; */
-		display: inline-block;
-		contain: content;
-		margin: 0 auto;
-		font-size: 2rem;
+<!-- Scripts -->
+<script src="/static/boggle/dictionary.js"></script>
+<script src="/static/boggle/WordTrie.js"></script>
+<script src="/static/boggle/minisat.js"></script>
+<script src="/static/boggle/boggle.js" defer></script>
+<script src="/static/boggle/unboggle.js" defer></script>
+<script src="/static/boggle/GridGame.js" type="module"></script>
 
-		--cell-size: 2em;
-	}
-	table {
-		margin: 0 auto;
-		border: 2px solid black;
-		user-select: none;
-		border-collapse: collapse;
-	}
-	td {
-		position: relative;
-		box-sizing: border-box;
-		width: var(--cell-size);
-		height: var(--cell-size);
-		text-align: center;
-		vertical-align: middle;
-		border: 1px solid #aaa;
-	}
-	td.void {
-		background-color: black;
-		border: none;
-	}
-	td.disabled {
-		background-color: gray;
-	}
-	td.highlight:not([disabled]) {
-		background-color: lightblue;
-	}
-	td:focus, td.highlight:focus {
-		background-color: #8cbaca;
-	}
-	td.circled::before {
-		content: "";
-		box-sizing: border-box;
-		display: block;
-		position: absolute;
-		left: 0;
-		right: 0;
-		top: 0;
-		bottom: 0;
-		width: 100%;
-		height: 100%;
-		border: 1px solid black;
-		border-radius: 50%;
-	}
-	</style>
-	<table id="board" tabindex="0">
-		<tbody id="boardBody">
-		</tbody>
-	</table>
-</template>
+<script type="module">
+import { init, GridGameElement } from "/static/boggle/GridGame.js";
 
-<grid-game id="boggle" type="boggle">
-ABCDW
-EFGHX
-IJKLY
-MNOPZ
+console.log("module code!!!");
+window.customElements.define("grid-game", GridGameElement);
+</script>
+
+<!-- BOGGLE ------------------------------------------------------------------->
+<h1>Boggle</h1>
+
+<p>Boggle is a classic board game in which players search for words constructed by connecting adjacent tiles in a grid of letters.  Letters can be used at most once, and are allowed to connect horizontally, vertically, or diagonally.  Listing all words in a Boggle board is a common algorithms interview question, easily achieved in by building a <a href="https://en.wikipedia.org/wiki/Trie">trie</a> data structure from a dictionary.  Use the widget below to see it in action!</p>
+
+<div id="boggle">
+<div id="boggle-controls" class="controls">
+	<button style="grid-column-end:span 2;" onclick="boggleRandomize()" type="button">Randomize</button>
+	<div class="checkboxes" style="grid-column-end:span 2">
+		<!-- Boggle Dice -->
+		<label>
+			<input type="radio" name="randomize" value="boggle-dice" required checked="checked">
+			<span>Boggle Dice</span>
+		</label>
+		<!-- Frequency -->
+		<label>
+			<input type="radio" name="randomize" value="frequency" required>
+			<span>Frequency</span>
+		</label>
+		<!-- Uniform -->
+		<label>
+			<input type="radio" name="randomize" value="uniform" required>
+			<span>Uniform</span>
+		</label>
+		<!-- Long Word -->
+		<label>
+			<input type="radio" name="randomize" value="long-word" required>
+			<span>Long Word</span>
+		</label>
+	</div>
+	<!--<input onclick="randomUniform()" type="button" value="Uniform">
+	<input onclick="randomFreq()" type="button" value="Letter Frequency">
+	<input onclick="randomWord()" type="button" value="16-Letter Word">
+	<input onclick="randomDice()" type="button" value="Boggle Dice">-->
+	<!--<div>
+		<label>Size</label>
+		<input style="max-width: 2em" type="number" step="1" value="4">
+		<label>x</label>
+		<input style="max-width: 2em" type="number" step="1" value="4">
+	</div>-->
+	<button style="grid-column-end:span 2" onclick="solveBoggle()" type="button">PLAY</button>
+</div>
+<grid-game id="boggle-board" type="boggle">
+ABCD
+EFGH
+IJKL
+MNOP
 </grid-game>
+<div id="boggle-list">
+	<div class="wordList"></div>
+</div>
+<div id="boggle-solve" class="controls">
+	<button onclick="solveBoggle()" type="button">SOLVE!</button>
+</div>
+</div>
+
+<!-- UNBOGGLE ----------------------------------------------------------------->
+<h1>Unboggle</h1>
+
+<p>Boggle is easy enough to solve, so let's turn our attention to games of <b>Unboggle</b>.  Can we construct a Boggle board that contains every word in a given list?  As you might expect, this problem is much harder!  Other than a few <a href="https://stackoverflow.com/questions/21593925/how-to-create-a-boggle-board-from-a-list-of-words-reverse-boggle-solver">discussions</a> <a href="https://puzzling.stackexchange.com/questions/92202/reverse-big-boggle">online</a>, there is not much prior work to start from.</p>
+
+<!-- Attempt #1: SAT SOLVER -----------------------------------------> 
+<h2>Attempt #1:  SAT Solver</h2>
+
+Unboggle strikes me as a problem 
+
+<p>Below, I encode unboggle as a satisfiability and use <tt>minisat.js</tt> to search for a satisfying assignment.  MiniSat is a 
+
+maintained for some reason by the folks at <a href="https://www.meteor.com">Meteor</a> 
+
+use the logic-solver wrapper around.</p>
+
+<div id="unboggle">
+<!-- Board -->
+<grid-game id="unboggle-board" type="boggle">
+THE_
+UN__
+BOGG
+LER_
+</grid-game>
+<!-- Spinner -->
+<div id="unboggle-overlay">
+	<div class="spinner"></div>
+</div>
+<!-- Word List -->
+<div id="unboggle-words">
+<textarea id="unboggle-input" type="text">
+ANTIQUE
+EQUITY
+QUALITY
+EQUIVALENT
+ANTIQUITY
+DIVIDE
+QUILT
+</textarea>
+</div>
+<!-- Controls -->
+<div id="unboggle-solve" class="controls">
+	<button id="unboggle-button" type="button">UNSOLVE?</button>
+</div>
+</div>
+
+<!-- Attempt #2: SAT SOLVER -----------------------------------------> 
+<h2>Attempt #2:  Brute-Force Search with Pruning</h2>
+
+<!-- CROSSWORD ---------------------------------------------------------------->
+<h1>Crossword</h1>
 
 <grid-game id="crossword" type="crossword">
 ___@____@____
@@ -319,492 +537,61 @@ ___@_________
 _____@@___@@@
 @@@__@_@_____
 _________@__@
-@@__@@_@@____
+____@@_@@____
 ___@_________
-_____@____@@@
-@@@_@_@@_@___
-_________@___
-_@__@____@___
-____@@@__@___
+NOFREELUNCH@@
+@@@_@_@@____N
+_________@__O
+_@__@____@__O
+____@@@__@__P
 </grid-game>
 
-<script>
-"use strict"
+<!-- SUDOKU ------------------------------------------------------------------->
+<h1>Sudoku / 数独</h1>
 
-// get template
-let gridGameTemplate = document.getElementById("grid-game-template");
+<grid-game id="sudoku" type="sudoku">
+53__7____
+6__195___
+_98____6_
+8___6___3
+4__8_3__1
+7___2___6
+_6____28_
+____8__79
+</grid-game>
 
-function mod(a,b) {
-	return ((a%b)+b)%b;
-};
+<!-- TECHNICAL DETAILS -------------------------------------------------------->
+<h1>Technical Details</h1>
 
-const Highlight = {
-	NONE : null,
-	ROW  : 1,
-	COL  : 2
-}
+<h2>SAT Solvers</h2>
 
-// define custom element
-class GridGameElement extends HTMLElement {
-	// key constants
+Unit Propagation, Clause Learning, DPLL, CDCL
 
-	constructor(){
-		console.log("boggle :: constructor");
-		// required call to base constructor
-		super();
+<h2>Backbite Algorithm for Hamiltonian Paths</h2>
 
-		// attach template as shadow dom
-		this.attachShadow({ mode: "open" });
-		this.shadowRoot.appendChild(gridGameTemplate.content.cloneNode(true));
+<p>The <em>Long Words</em> randomization option above selects a random word of sixteen letters or more and snakes it through the grid in such a way that the chosen word forms a valid Boggle path.  For sixteen-letter words on a 4x4 grid, it would have been easy enough to sample one of several pre-determined paths through the grid, but I wanted a more general solution for arbitrarily large boggle boards.  
 
-		// get named elements
-		this.boardElement = this.shadowRoot.getElementById("board");
-		this.boardBody = this.shadowRoot.getElementById("boardBody");
+<p>So, given an $M \times N$ grid, how do we randomly sample a valid Boggle path?  Board-exhausting Boggle paths are actually Hamiltonian paths in disguise, and we can use the backbite algorithm to randomly sample them!
 
-		// focus / highlight
-		this.focusedCell = null;
-		this.highlightCells = null;
-		this.highlightFocusIdx = -1;
-		this.highlightMode = null;
-		
-		// game info
-		this.gameType = null;
+<p><em>Minor Implementation Detail:</em>  Although I use the backbite algorithm for <em>Long Word</em> randomization, I don't run the algorithm long enough to achieve a uniformly random Hamiltonian path.
 
-		// events
-		// TODO: oninput event
-		this.addEventListener("keydown", this.handleKeyDown);
-		this.addEventListener("blur", this.handleBlur);
-	}
-	
-	//// EVENTS //////////////////////////////////////////////////////
+<p>As an aside, the problem of determining whether a graph $G$ contains a Hamiltonian path (or cycle) is <a href="https://en.wikipedia.org/wiki/NP-completeness">NP-complete</a>.  The standard proof involves a reduction from 3-SAT!  By encoding the Hamiltonian path problem as a satisfiability problem, we can again use <tt>minisat.js</tt> to search for a solution.</p>
 
-	handleClick(row, col){
-		// ignore click when disabled
-		if(this.disabled){ return; }
-		console.log(`boggle :: click (r=${row}, c=${col})`);
-	}
+<h2>Custom <tt>GridGame</tt> Web Component</h2>
 
-	// when one cell gains focus
-	handleFocus(row, col){
-		console.log(`boggle :: focus (r=${row}, c=${col})`);
+<h2>CSS Tricks</h2>
 
-		// select row/col in crossword mode
-		if(this.gameType == "crossword"){
-			if(this.highlightMode == Highlight.COL){
-				// change highlight direction if clicking highlighted col
-				if(this.focusedCell && this.focusedCell[1] == col){
-					this.highlightMode = Highlight.ROW;
-					this.highlightRow(row, col);
-				} else {
-					this.highlightCol(col, row);
-				}
-			} else {
-				// change highlight direction if clicking highlighted col
-				if(this.focusedCell && this.focusedCell[0] == row){
-					this.highlightMode = Highlight.COL;
-					this.highlightCol(col, row);
-				} else {
-					this.highlightRow(row, col);
-				}
-			}
-		}
+<!-- MISC --------------------------------------------------------------------->
+<h1>Tidbits</h1>
 
-		// set focused cell
-		this.focusedCell = [row, col];
-	}
+I learned a number of interesting things working on this project!
 
-	// when the entire board loses focus
-	handleBlur(){
-		console.log("boggle :: blur");
-		this.focusedCell = null;
-	}
-
-	handleKeyDown(evt){
-		const Key = {
-			BACKSPACE : 8,
-			TAB : 9,
-			LEFT : 37,
-			RIGHT: 39,
-			UP : 38,
-			DOWN : 40,
-			DELETE : 46
-		}
-
-		const FocusAction = {
-			NONE : 0,
-			NEXT : 1,
-			PREV : 2,
-			UP : 3,
-			DOWN : 4
-		}
-
-		// ignore when inactive or disabled
-		if(this != document.activeElement){ return; }
-		if(this.disabled){ return; }
-		if(this.focusedCell == null){ return; };
-
-		let focusedCell = this.getCell(this.focusedCell[0], this.focusedCell[1]);
-
-		evt.preventDefault();
-		console.log("boggle :: pressed " + evt.keyCode);
-
-		let focusAction = FocusAction.NONE;
-
-		// handle alpha input
-		if(evt.keyCode >= 65 && evt.keyCode <= 90){
-			console.log("boggle :: alpha input");
-			let char = String.fromCharCode(evt.keyCode);
-			focusedCell.textContent = char;
-			focusAction = FocusAction.NEXT;
-		}
-		// handle numeric input
-		if(evt.keyCode >= 48 && evt.keyCode <= 57){
-			console.log("boggle :: numeric input");
-			let char = String.fromCharCode(evt.keyCode);
-			focusedCell.textContent = char;
-			focusAction = FocusAction.NEXT;
-		}
-		// handle deletion
-		if(evt.keyCode == Key.BACKSPACE){
-			focusedCell.textContent = "";
-			focusAction = FocusAction.PREV;
-		}
-		if(evt.keyCode == Key.DELETE){
-			focusedCell.textContent = "";
-			focusAction = FocusAction.NONE;
-		}
-
-		// handle direction keys
-		if(evt.keyCode == Key.LEFT){ focusAction = FocusAction.PREV; }
-		if(evt.keyCode == Key.RIGHT){ focusAction = FocusAction.NEXT; }
-		if(evt.keyCode == Key.UP){ focusAction = FocusAction.UP; }
-		if(evt.keyCode == Key.DOWN){ focusAction = FocusAction.DOWN; }
-
-		if(focusAction == FocusAction.NONE){ return; }
-		
-		if(this.highlightCells == null){
-			let row = this.focusedCell[0];
-			let col = this.focusedCell[1];
-			let disabled = true;
-			let cell = this.getCell(row, col);
-
-			//TODO:  what if entire row/col is disabled?
-			while(disabled && focusAction != FocusAction.NONE){
-
-				if(focusAction == FocusAction.PREV){
-					[row, col] = this.cellPosPrev(row, col);
-				}
-				if(focusAction == FocusAction.NEXT){
-					[row, col] = this.cellPosNext(row, col);
-				}
-				if(focusAction == FocusAction.UP){
-					row = mod( (row - 1), this.numRows);
-				}
-				if(focusAction == FocusAction.DOWN){
-					row = mod( (row + 1), this.numRows);
-				}
-
-				cell = this.getCell(row, col);
-				disabled = cell.hasAttribute("disabled") && cell.getAttribute("disabled") != "false";
-			}
-
-			cell.focus();
-		} else {
-			let disabled = true;
-			let cell = this.highlightCells[this.highlightFocusIdx];
-
-			//TODO:  what if entire row/col is disabled?
-			while(disabled && focusAction != FocusAction.NONE){
-
-				if(focusAction == FocusAction.PREV){
-					this.highlightFocusIdx = mod(this.highlightFocusIdx - 1, this.highlightCells.length);
-				}
-				if(focusAction == FocusAction.NEXT){
-					this.highlightFocusIdx = mod(this.highlightFocusIdx + 1, this.highlightCells.length);
-				}
-				if(focusAction == FocusAction.UP){
-					// TODO (up row/col)
-				}
-				if(focusAction == FocusAction.DOWN){
-					// TODO (down row/col)
-				}
-
-				cell = this.highlightCells[this.highlightFocusIdx];
-				disabled = cell.hasAttribute("disabled") && cell.getAttribute("disabled") != "false";
-			}
-
-			cell.focus();
-		}
-	}
-
-	cellPosNext(row, col){
-		if(col + 1 >= this.numCols){
-			return [ mod(row + 1, this.numRows), 
-			         mod(col + 1, this.numCols) ];
-		} else {
-			return [ row, col + 1];
-		}
-	}
-	
-	cellPosPrev(row, col){
-		if(col - 1 < 0){
-			return [ mod(row - 1, this.numRows), mod(col - 1, this.numCols) ];
-		} else {
-			return [ row, col - 1];
-		}
-	}
-
-	//////////////////////////////////////////////////////////////////
-
-	/* RESETBOARD
-	 * Modifies the board to match the current dimensions (numRows/numCols).
-	 */
-	resetBoard(){
-		console.log("boggle :: resetBoard()");
-
-		// unhighlight
-		this.unhighlight();
-
-		// remove rows as needed
-		while(this.boardBody.children.length > this.numRows){
-			this.boardBody.removeChild(this.boardBody.lastChild);
-		}
-		// create rows as needed
-		while(this.boardBody.children.length < this.numRows){
-			let tr = document.createElement("tr");
-			this.boardBody.appendChild(tr);
-		}
-
-		// modify existing rows add/remove cols as needed
-		for(let rowIdx = 0; rowIdx < this.numRows; rowIdx++){
-			let rowElement = this.boardBody.children[rowIdx];
-			// remove cols as needed
-			while(rowElement.children.length > this.numCols){
-				rowElement.removeChild(rowElement.lastChild);
-			}
-			// create cols as needed
-			while(rowElement.children.length < this.numCols){
-				let td = document.createElement("td");
-				let colIdx = rowElement.children.length;
-				td.setAttribute("tabindex", 0);
-				td.addEventListener("click", 
-					evt => this.handleClick(rowIdx, colIdx)
-				);
-				td.addEventListener("focus", 
-					evt => this.handleFocus(rowIdx, colIdx)
-				);
-				rowElement.appendChild(td);
-			}
-		}
-	}
-
-	//////////////////////////////////////////////////////////////////
-
-	fromString(input){
-		// if input empty, fail gracefully
-		if(!input){ return null; }
-		input = input.trim();
-		if(input.length == 0){ return null; }
-		
-		// parse input and validate dimensions
-		let lines = input.split("\n");
-		let numRows = lines.length;
-		if(numRows < 1){ return null; }
-		
-		let numCols = 0;
-		let data = [];
-
-		for(let r = 0; r < numRows; r++){
-			let line = lines[r].split("");
-
-			// first row determines numCols
-			if(r == 0){ numCols = line.length; }
-			else if(line.length != numCols){ return null; }
-
-			// handle blank / disabled cells
-			for(let c = 0; c < numCols; c++){
-				if(line[c] == "_"){
-					line[c] = "";
-				} else if(line[c] == "@"){
-					line[c] = null;
-				}
-			}
-
-			data.push(line);
-		}
-		
-		return {
-			numRows : numRows,
-			numCols : numCols,
-			data : data
-		};
-	}
-
-	//// CALLBACKS ///////////////////////////////////////////////////
-
-	connectedCallback(){
-		console.log("boggle :: connectedCallback");
-
-		// ISSUE: TextContent may not always exist when `connectedCallback()`
-		// is called.  See for example:
-		//    > https://github.com/WebReflection/html-parsed-element
-		//    > https://stackoverflow.com/questions/48498581/textcontent-empty-in-connectedcallback-of-a-custom-htmlelement
-		if(this.textContent){
-			let boardData = this.fromString(this.textContent);
-
-			if(boardData){
-				this.numRows = boardData.numRows;
-				this.numCols = boardData.numCols;
-
-				for(let r = 0; r < this.numRows; r++){
-					for(let c = 0; c < this.numCols; c++){
-						// TODO: make it easier to iterate over cells without
-						// depending on specific structure as a table
-						let data = boardData.data[r][c];
-						let cell = this.getCell(r,c);
-
-						if(data)          { cell.textContent = data; }
-						if(data === null) {
-							cell.classList.add("void");
-							cell.setAttribute("disabled","");
-							cell.removeAttribute("tabindex","");
-						}
-					}
-				}
-			}
-		}
-
-		this.resetBoard();
-	}
-
-	attributeChangedCallback(name, oldValue, newValue){
-		if(oldValue == newValue) return;
-		console.log(`boggle :: attribute changed (${name}, ${oldValue}, ${newValue})`);
-		
-		switch(name){
-			case "rows": this.numRows = newValue; break;
-			case "cols": this.numCols = newValue; break;
-			case "type":
-				this.gameType = newValue;
-		}
-
-		// when disabled, remove from tab order
-		if (this.disabled) {
-			this.boardElement.setAttribute('tabindex', '-1');
-			this.setAttribute('aria-disabled', 'true');
-		} else {
-			this.boardElement.setAttribute('tabindex', '0');
-			this.setAttribute('aria-disabled', 'false');
-		}
-	}
-
-	//// PROPERTIES //////////////////////////////////////////////////
-
-	// observed attributes
-
-	static get observedAttributes(){
-		return ["disabled", "cols", "rows", "type"];
-	}
-
-	// disabled
-
-	get disabled() {
-		return this.hasAttribute("disabled");
-	}
-
-	set disabled(val) {
-		if(val){ this.setAttribute("disabled", ""); }
-		else   { this.removeAttribute("disabled");  }
-	}
-
-	// dimensions
-
-	get numRows() { return Number(this.getAttribute("rows")) || 4; }
-	get numCols() { return Number(this.getAttribute("cols")) || 4; }
-	set numRows(count) { 
-		this.setAttribute("rows", (count > 0) ? count : 0 );
-		this.resetBoard();
-	}
-	set numCols(count) {
-		this.setAttribute("cols", (count > 0) ? count : 0 );
-		this.resetBoard();
-	}
-
-	getCell(row, col){
-		return this.boardBody.children[row].children[col];
-	}
-	getFocusedCell(row, col){
-		return this.boardBody.children[row].children[col];
-	}
-
-	// Selection -----------------------------------------------------
-
-	unhighlight(){
-		if(!this.highlightCells) { return; }
-
-		for(let k = 0; k < this.highlightCells.length; k++){
-			this.highlightCells[k].classList.remove("highlight");
-		}
-		
-		this.highlightCells = null;
-	}
-
-	// selection
-
-	cellIsDisabled(row, col){
-		let cell = this.getCell(row,col);
-		return (cell.hasAttribute("disabled") && cell.getAttribute("disabled") != "false");
-	}
-
-	highlight(coords, focusIdx=0){
-		if(!coords){ this.unselect(); return; }
-
-		this.unhighlight();
-		this.highlightCells = [];
-		for(let k = 0; k < coords.length; k++){
-			let pos = coords[k];
-			let cell = this.getCell(pos[0], pos[1]);
-			this.highlightCells.push(cell);
-			cell.classList.add("highlight");
-		}
-
-		if(this.highlightCells.length > 0){
-			this.highlightFocusIdx = focusIdx;
-			this.highlightCells[focusIdx].focus();
-		} else {
-			this.highlightCells = null;
-			this.highlightFocusIdx = -1;
-		}
-	}
-
-	highlightRow(row, focusCol=0){
-		console.log(`boggle :: highlightRow (${row}, ${focusCol})`);
-		if(row < 0 || row > this.numRows){ this.unhighlight(); return; }
-
-		let coords = [];
-		for(let c = 0; c < this.numCols; c++){
-			coords.push([row,c]);
-		}
-		
-		if(focusCol < 0) { focusCol = 0; }
-		if(focusCol > coords.length) { focusCol = coords.length; }
-		this.highlight(coords, focusCol);
-	}
-
-	highlightCol(col, focusRow=0){
-		if(col < 0 || col > this.numCols){ this.unhighlight(); return; }
-
-		let coords = [];
-		for(let r = 0; r < this.numRows; r++){
-			coords.push([r,col]);
-		}
-
-		this.highlight(coords, focusRow);
-	}
-}
-
-window.customElements.define("grid-game", GridGameElement);
-</script>
+<ul>
+<li>Apparently, there was once a <a href="https://www.youtube.com/watch?v=ydXk65iekio&amp;feature=emb_logo">game show</a> based on Boggle!</li>
+<li>Historical crossword data is surprisingly hard to come by, as crossword re-sale is serious business for the New York Times.  Crossword dictionaries curated by <a href="https://www.xwordinfo.com/WordList/">seasoned solvers</a> can cost upwards of $200!</li>
+<li></li>
+<li></li>
+</ul>
 
 
 	</div>
@@ -820,7 +607,7 @@ window.customElements.define("grid-game", GridGameElement);
 			Powered by <a href="http://blog.getpelican.com/">Pelican</a> and hosted on <a href="https://github.com/benrbray/benrbray.github.io-source">GitHub</a>.
 		</span>
 		<span style="float: right">
-			Last updated on March 05, 2020
+			Last updated on March 19, 2020
 		</span>
 	</div>
 </div>

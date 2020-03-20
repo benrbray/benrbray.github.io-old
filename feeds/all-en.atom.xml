@@ -1,84 +1,322 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Benjamin R. Bray</title><link href="https://benrbray.com/" rel="alternate"></link><link href="http://localhost:8000/feeds/all-en.atom.xml" rel="self"></link><id>https://benrbray.com/</id><updated>2020-03-02T00:00:00-05:00</updated><entry><title>Boggle / Unboggle</title><link href="https://benrbray.com/posts/2020/boggle-unboggle" rel="alternate"></link><published>2020-03-02T00:00:00-05:00</published><updated>2020-03-02T00:00:00-05:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2020-03-02:/posts/2020/boggle-unboggle</id><summary type="html">Finds all words in a boggle board using the trie data structure.</summary><content type="html">
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Benjamin R. Bray</title><link href="https://benrbray.com/" rel="alternate"></link><link href="http://localhost:8000/feeds/all-en.atom.xml" rel="self"></link><id>https://benrbray.com/</id><updated>2020-03-20T00:00:00-04:00</updated><entry><title>Real-time Game Physics</title><link href="https://benrbray.com/posts/2020/real-time-game-physics" rel="alternate"></link><published>2020-03-20T00:00:00-04:00</published><updated>2020-03-20T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2020-03-20:/posts/2020/real-time-game-physics</id><summary type="html">&lt;p&gt;Real-time Game Physics&lt;/p&gt;</summary><content type="html">&lt;p&gt;Collision Detection&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Part 1:  Convex Geometry&lt;/li&gt;
+&lt;li&gt;&lt;a href="/posts/2018/collision-detection-minkowski-sum"&gt;Part 2:  Minkowski Sum&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="/posts/2017/collision-detection-separating-axis-theorem"&gt;Part 3:  Separating Axis Theorem&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;&lt;a href="/posts/2020/collision-detection-gjk-epa"&gt;Part 4:  Gilbert-Johnson-Keerthi Algorithm&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Part 5:  Expanding Polytope Algorithm&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Real-time Game Physics&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Part 6: Physics Engine Pipeline&lt;/li&gt;
+&lt;li&gt;Part 7: Time Steps &amp;amp; Numerical Integration&lt;/li&gt;
+&lt;li&gt;Part 8: Impulse-based Physics &amp;amp; Sequential Impulse&lt;/li&gt;
+&lt;li&gt;Part 9: Constraint-based Physics&lt;/li&gt;
+&lt;li&gt;Part 10: Considerations for Real-time Physics&lt;/li&gt;
+&lt;li&gt;Part 11: Continuous Collision Detection&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Practical Game Physics&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Part 12: Bounding Volume Hierarchies&lt;/li&gt;
+&lt;/ul&gt;</content><category term="geometry"></category><category term="game-dev"></category><category term="linear-algebra"></category></entry><entry><title>Collision Detection: GJK &amp; EPA</title><link href="https://benrbray.com/posts/2020/collision-detection-gjk-epa" rel="alternate"></link><published>2020-03-18T00:00:00-04:00</published><updated>2020-03-18T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2020-03-18:/posts/2020/collision-detection-gjk-epa</id><content type="html">&lt;p&gt;The Gilbert–Johnson–Keerthi distance algorithm is a method of determining the minimum distance between two convex sets. Unlike many other distance algorithms, it does not require that the geometry data be stored in any specific format, but instead relies solely on a support function to iteratively generate closer simplices to the correct answer using the configuration space obstacle (CSO) of two convex shapes, more commonly known as the Minkowski difference.&lt;/p&gt;</content><category term="geometry"></category><category term="linear-algebra"></category><category term="game-dev"></category><category term="graphics"></category></entry><entry><title>Boggle / Unboggle</title><link href="https://benrbray.com/posts/2020/boggle-unboggle" rel="alternate"></link><published>2020-03-02T00:00:00-05:00</published><updated>2020-03-02T00:00:00-05:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2020-03-02:/posts/2020/boggle-unboggle</id><summary type="html">Finds all words in a boggle board using the trie data structure.</summary><content type="html">
 
+&lt;!-- TODO: import from file? --&gt;
+&lt;!-- Boggle Style --&gt;
 &lt;style&gt;
-grid-game {
+
+/* ==== BOGGLE ============================================================== */
+
+#boggle {
+	display: grid;
+	position: relative;
+	
+	grid-gap: 1rem;
+	grid: "controls words" auto
+	      "board words" 1fr
+		  "solve words" auto
+		  / auto 1fr;
+}
+
+#boggle-controls { grid-area: controls; }
+#boggle-solve    { grid-area: solve;    }
+#boggle-board    { grid-area: board;    }
+#boggle-list     { grid-area: words;    }
+
+#boggle-list {
+	position: absolute;
+	max-height: 100%;
+	overflow-y: auto;
+}
+
+.wordList {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+}
+
+.wordList span {
+	flex: 1;
+	padding: 2px 0.5em;
+	margin: 0.2em;
+
+	text-align: center;
+	color: darkblue;
+	background-color: lightblue;
+	border: 1px solid darkblue;
+	border-radius: 4px;
+	user-select: none;
+}
+
+.wordList span:hover {
+	background-color: #89bed0;
+}
+
+#boggle-controls {
+	display: grid;
+	grid: auto / 1fr 1fr;
+	grid-auto-flow: row;
+	grid-gap: 0.4em;
+}
+
+#boggle-solve button {
+	font-size: 1.2em;
+	color: white;
+	background-color: #52b955;
+	border: none;
+}
+
+#boggle-solve button:hover {
+	background-color: #479c4a;
+}
+
+#boggle .controls button {
 	display: block;
-	margin: 1em auto;
+	width: 100%;
+	height: 2em;
+}
+
+/* ==== UNBOGGLE ============================================================ */
+
+#unboggle {
+	display: grid;
+	position: relative;
+	
+	grid-gap: 1rem;
+	grid: "board words" 1fr
+		  "solve words" auto
+		  / auto 1fr;
+}
+
+#unboggle-solve { grid-area: solve; }
+#unboggle-board { grid-area: board; }
+#unboggle-words { grid-area: words; }
+
+#unboggle-board {
+	--cell-background-rgb: 0,0,0;
+	background-color: black;
+	color: white;
+}
+
+#unboggle-input {
+	width: 100%;
+	height: 100%;
+	font-size: 1.2em;
+}
+
+#unboggle-solve button {
+	font-size: 1.2em;
+	color: #52b955;
+	width: 100%;
+	height: 2em;
+	background-color: white;
+	border: 2px solid #52b955;
+}
+
+#unboggle-solve button:hover {
+	background-color: #eee;
+}
+
+#unboggle-button.stop {
+	border-color: red;
+	color: red;
+	background-color: white;
+}
+
+#unboggle-container {
+	position: relative;
+}
+
+#unboggle-overlay {
+	display: none;
+	position: relative;
+	grid-area: board;
+	background-color: rgba(255,255,255,0.5);
+	z-index: 1;
 }
 
 #crossword {
+	display: block;
 	font-size: 1rem;
+	margin: 1em auto;
+}
+
+.checkboxes {
+	display: grid;
+	grid: 1fr / 1fr 1fr;
+	grid-gap: 1px;
+	background-color: #999;
+	border: 1px solid #999;
+}
+
+.checkboxes input {
+	display: none;
+	position: absolute;
+	pointer-events: none;
+
+	background: transparent;
+	border-radius: 0px;
+	padding: 5px;
+	box-shadow: none!important;
+}
+.checkboxes input[type="radio"]:checked + span {
+	background-color: lightblue;
+	color: darkblue;
+}
+
+.checkboxes label {
+	background-color: white;
+	text-align: center;
+	user-select: none;
+}
+.checkboxes input[type="radio"] + span {
+  display: block;
+  padding: 5px 10px;
 }
 &lt;/style&gt;
 
-&lt;!-- Boggle Template --&gt;
-&lt;template id="grid-game-template"&gt;
-	&lt;style&gt;
-	:host {
-		/*all: initial; */
-		display: inline-block;
-		contain: content;
-		margin: 0 auto;
-		font-size: 2rem;
+&lt;!-- Scripts --&gt;
+&lt;script src="/static/boggle/dictionary.js"&gt;&lt;/script&gt;
+&lt;script src="/static/boggle/WordTrie.js"&gt;&lt;/script&gt;
+&lt;script src="/static/boggle/minisat.js"&gt;&lt;/script&gt;
+&lt;script src="/static/boggle/boggle.js" defer&gt;&lt;/script&gt;
+&lt;script src="/static/boggle/unboggle.js" defer&gt;&lt;/script&gt;
+&lt;script src="/static/boggle/GridGame.js" type="module"&gt;&lt;/script&gt;
 
-		--cell-size: 2em;
-	}
-	table {
-		margin: 0 auto;
-		border: 2px solid black;
-		user-select: none;
-		border-collapse: collapse;
-	}
-	td {
-		position: relative;
-		box-sizing: border-box;
-		width: var(--cell-size);
-		height: var(--cell-size);
-		text-align: center;
-		vertical-align: middle;
-		border: 1px solid #aaa;
-	}
-	td.void {
-		background-color: black;
-		border: none;
-	}
-	td.disabled {
-		background-color: gray;
-	}
-	td.highlight:not([disabled]) {
-		background-color: lightblue;
-	}
-	td:focus, td.highlight:focus {
-		background-color: #8cbaca;
-	}
-	td.circled::before {
-		content: "";
-		box-sizing: border-box;
-		display: block;
-		position: absolute;
-		left: 0;
-		right: 0;
-		top: 0;
-		bottom: 0;
-		width: 100%;
-		height: 100%;
-		border: 1px solid black;
-		border-radius: 50%;
-	}
-	&lt;/style&gt;
-	&lt;table id="board" tabindex="0"&gt;
-		&lt;tbody id="boardBody"&gt;
-		&lt;/tbody&gt;
-	&lt;/table&gt;
-&lt;/template&gt;
+&lt;script type="module"&gt;
+import { init, GridGameElement } from "/static/boggle/GridGame.js";
 
-&lt;grid-game id="boggle" type="boggle"&gt;
-ABCDW
-EFGHX
-IJKLY
-MNOPZ
+console.log("module code!!!");
+window.customElements.define("grid-game", GridGameElement);
+&lt;/script&gt;
+
+&lt;!-- BOGGLE -------------------------------------------------------------------&gt;
+&lt;h1&gt;Boggle&lt;/h1&gt;
+
+&lt;p&gt;Boggle is a classic board game in which players search for words constructed by connecting adjacent tiles in a grid of letters.  Letters can be used at most once, and are allowed to connect horizontally, vertically, or diagonally.  Listing all words in a Boggle board is a common algorithms interview question, easily achieved in by building a &lt;a href="https://en.wikipedia.org/wiki/Trie"&gt;trie&lt;/a&gt; data structure from a dictionary.  Use the widget below to see it in action!&lt;/p&gt;
+
+&lt;div id="boggle"&gt;
+&lt;div id="boggle-controls" class="controls"&gt;
+	&lt;button style="grid-column-end:span 2;" onclick="boggleRandomize()" type="button"&gt;Randomize&lt;/button&gt;
+	&lt;div class="checkboxes" style="grid-column-end:span 2"&gt;
+		&lt;!-- Boggle Dice --&gt;
+		&lt;label&gt;
+			&lt;input type="radio" name="randomize" value="boggle-dice" required checked="checked"&gt;
+			&lt;span&gt;Boggle Dice&lt;/span&gt;
+		&lt;/label&gt;
+		&lt;!-- Frequency --&gt;
+		&lt;label&gt;
+			&lt;input type="radio" name="randomize" value="frequency" required&gt;
+			&lt;span&gt;Frequency&lt;/span&gt;
+		&lt;/label&gt;
+		&lt;!-- Uniform --&gt;
+		&lt;label&gt;
+			&lt;input type="radio" name="randomize" value="uniform" required&gt;
+			&lt;span&gt;Uniform&lt;/span&gt;
+		&lt;/label&gt;
+		&lt;!-- Long Word --&gt;
+		&lt;label&gt;
+			&lt;input type="radio" name="randomize" value="long-word" required&gt;
+			&lt;span&gt;Long Word&lt;/span&gt;
+		&lt;/label&gt;
+	&lt;/div&gt;
+	&lt;!--&lt;input onclick="randomUniform()" type="button" value="Uniform"&gt;
+	&lt;input onclick="randomFreq()" type="button" value="Letter Frequency"&gt;
+	&lt;input onclick="randomWord()" type="button" value="16-Letter Word"&gt;
+	&lt;input onclick="randomDice()" type="button" value="Boggle Dice"&gt;--&gt;
+	&lt;!--&lt;div&gt;
+		&lt;label&gt;Size&lt;/label&gt;
+		&lt;input style="max-width: 2em" type="number" step="1" value="4"&gt;
+		&lt;label&gt;x&lt;/label&gt;
+		&lt;input style="max-width: 2em" type="number" step="1" value="4"&gt;
+	&lt;/div&gt;--&gt;
+	&lt;button style="grid-column-end:span 2" onclick="solveBoggle()" type="button"&gt;PLAY&lt;/button&gt;
+&lt;/div&gt;
+&lt;grid-game id="boggle-board" type="boggle"&gt;
+ABCD
+EFGH
+IJKL
+MNOP
 &lt;/grid-game&gt;
+&lt;div id="boggle-list"&gt;
+	&lt;div class="wordList"&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;div id="boggle-solve" class="controls"&gt;
+	&lt;button onclick="solveBoggle()" type="button"&gt;SOLVE!&lt;/button&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;!-- UNBOGGLE -----------------------------------------------------------------&gt;
+&lt;h1&gt;Unboggle&lt;/h1&gt;
+
+&lt;p&gt;Boggle is easy enough to solve, so let's turn our attention to games of &lt;b&gt;Unboggle&lt;/b&gt;.  Can we construct a Boggle board that contains every word in a given list?  As you might expect, this problem is much harder!  Other than a few &lt;a href="https://stackoverflow.com/questions/21593925/how-to-create-a-boggle-board-from-a-list-of-words-reverse-boggle-solver"&gt;discussions&lt;/a&gt; &lt;a href="https://puzzling.stackexchange.com/questions/92202/reverse-big-boggle"&gt;online&lt;/a&gt;, there is not much prior work to start from.&lt;/p&gt;
+
+&lt;!-- Attempt #1: SAT SOLVER -----------------------------------------&gt; 
+&lt;h2&gt;Attempt #1:  SAT Solver&lt;/h2&gt;
+
+Unboggle strikes me as a problem 
+
+&lt;p&gt;Below, I encode unboggle as a satisfiability and use &lt;tt&gt;minisat.js&lt;/tt&gt; to search for a satisfying assignment.  MiniSat is a 
+
+maintained for some reason by the folks at &lt;a href="https://www.meteor.com"&gt;Meteor&lt;/a&gt; 
+
+use the logic-solver wrapper around.&lt;/p&gt;
+
+&lt;div id="unboggle"&gt;
+&lt;!-- Board --&gt;
+&lt;grid-game id="unboggle-board" type="boggle"&gt;
+THE_
+UN__
+BOGG
+LER_
+&lt;/grid-game&gt;
+&lt;!-- Spinner --&gt;
+&lt;div id="unboggle-overlay"&gt;
+	&lt;div class="spinner"&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;!-- Word List --&gt;
+&lt;div id="unboggle-words"&gt;
+&lt;textarea id="unboggle-input" type="text"&gt;
+ANTIQUE
+EQUITY
+QUALITY
+EQUIVALENT
+ANTIQUITY
+DIVIDE
+QUILT
+&lt;/textarea&gt;
+&lt;/div&gt;
+&lt;!-- Controls --&gt;
+&lt;div id="unboggle-solve" class="controls"&gt;
+	&lt;button id="unboggle-button" type="button"&gt;UNSOLVE?&lt;/button&gt;
+&lt;/div&gt;
+&lt;/div&gt;
+
+&lt;!-- Attempt #2: SAT SOLVER -----------------------------------------&gt; 
+&lt;h2&gt;Attempt #2:  Brute-Force Search with Pruning&lt;/h2&gt;
+
+&lt;!-- CROSSWORD ----------------------------------------------------------------&gt;
+&lt;h1&gt;Crossword&lt;/h1&gt;
 
 &lt;grid-game id="crossword" type="crossword"&gt;
 ___@____@____
@@ -87,492 +325,61 @@ ___@_________
 _____@@___@@@
 @@@__@_@_____
 _________@__@
-@@__@@_@@____
+____@@_@@____
 ___@_________
-_____@____@@@
-@@@_@_@@_@___
-_________@___
-_@__@____@___
-____@@@__@___
+NOFREELUNCH@@
+@@@_@_@@____N
+_________@__O
+_@__@____@__O
+____@@@__@__P
 &lt;/grid-game&gt;
 
-&lt;script&gt;
-"use strict"
+&lt;!-- SUDOKU -------------------------------------------------------------------&gt;
+&lt;h1&gt;Sudoku / 数独&lt;/h1&gt;
 
-// get template
-let gridGameTemplate = document.getElementById("grid-game-template");
+&lt;grid-game id="sudoku" type="sudoku"&gt;
+53__7____
+6__195___
+_98____6_
+8___6___3
+4__8_3__1
+7___2___6
+_6____28_
+____8__79
+&lt;/grid-game&gt;
 
-function mod(a,b) {
-	return ((a%b)+b)%b;
-};
+&lt;!-- TECHNICAL DETAILS --------------------------------------------------------&gt;
+&lt;h1&gt;Technical Details&lt;/h1&gt;
 
-const Highlight = {
-	NONE : null,
-	ROW  : 1,
-	COL  : 2
-}
+&lt;h2&gt;SAT Solvers&lt;/h2&gt;
 
-// define custom element
-class GridGameElement extends HTMLElement {
-	// key constants
+Unit Propagation, Clause Learning, DPLL, CDCL
 
-	constructor(){
-		console.log("boggle :: constructor");
-		// required call to base constructor
-		super();
+&lt;h2&gt;Backbite Algorithm for Hamiltonian Paths&lt;/h2&gt;
 
-		// attach template as shadow dom
-		this.attachShadow({ mode: "open" });
-		this.shadowRoot.appendChild(gridGameTemplate.content.cloneNode(true));
+&lt;p&gt;The &lt;em&gt;Long Words&lt;/em&gt; randomization option above selects a random word of sixteen letters or more and snakes it through the grid in such a way that the chosen word forms a valid Boggle path.  For sixteen-letter words on a 4x4 grid, it would have been easy enough to sample one of several pre-determined paths through the grid, but I wanted a more general solution for arbitrarily large boggle boards.  
 
-		// get named elements
-		this.boardElement = this.shadowRoot.getElementById("board");
-		this.boardBody = this.shadowRoot.getElementById("boardBody");
+&lt;p&gt;So, given an $M \times N$ grid, how do we randomly sample a valid Boggle path?  Board-exhausting Boggle paths are actually Hamiltonian paths in disguise, and we can use the backbite algorithm to randomly sample them!
 
-		// focus / highlight
-		this.focusedCell = null;
-		this.highlightCells = null;
-		this.highlightFocusIdx = -1;
-		this.highlightMode = null;
-		
-		// game info
-		this.gameType = null;
+&lt;p&gt;&lt;em&gt;Minor Implementation Detail:&lt;/em&gt;  Although I use the backbite algorithm for &lt;em&gt;Long Word&lt;/em&gt; randomization, I don't run the algorithm long enough to achieve a uniformly random Hamiltonian path.
 
-		// events
-		// TODO: oninput event
-		this.addEventListener("keydown", this.handleKeyDown);
-		this.addEventListener("blur", this.handleBlur);
-	}
-	
-	//// EVENTS //////////////////////////////////////////////////////
+&lt;p&gt;As an aside, the problem of determining whether a graph $G$ contains a Hamiltonian path (or cycle) is &lt;a href="https://en.wikipedia.org/wiki/NP-completeness"&gt;NP-complete&lt;/a&gt;.  The standard proof involves a reduction from 3-SAT!  By encoding the Hamiltonian path problem as a satisfiability problem, we can again use &lt;tt&gt;minisat.js&lt;/tt&gt; to search for a solution.&lt;/p&gt;
 
-	handleClick(row, col){
-		// ignore click when disabled
-		if(this.disabled){ return; }
-		console.log(`boggle :: click (r=${row}, c=${col})`);
-	}
+&lt;h2&gt;Custom &lt;tt&gt;GridGame&lt;/tt&gt; Web Component&lt;/h2&gt;
 
-	// when one cell gains focus
-	handleFocus(row, col){
-		console.log(`boggle :: focus (r=${row}, c=${col})`);
+&lt;h2&gt;CSS Tricks&lt;/h2&gt;
 
-		// select row/col in crossword mode
-		if(this.gameType == "crossword"){
-			if(this.highlightMode == Highlight.COL){
-				// change highlight direction if clicking highlighted col
-				if(this.focusedCell &amp;&amp; this.focusedCell[1] == col){
-					this.highlightMode = Highlight.ROW;
-					this.highlightRow(row, col);
-				} else {
-					this.highlightCol(col, row);
-				}
-			} else {
-				// change highlight direction if clicking highlighted col
-				if(this.focusedCell &amp;&amp; this.focusedCell[0] == row){
-					this.highlightMode = Highlight.COL;
-					this.highlightCol(col, row);
-				} else {
-					this.highlightRow(row, col);
-				}
-			}
-		}
+&lt;!-- MISC ---------------------------------------------------------------------&gt;
+&lt;h1&gt;Tidbits&lt;/h1&gt;
 
-		// set focused cell
-		this.focusedCell = [row, col];
-	}
+I learned a number of interesting things working on this project!
 
-	// when the entire board loses focus
-	handleBlur(){
-		console.log("boggle :: blur");
-		this.focusedCell = null;
-	}
-
-	handleKeyDown(evt){
-		const Key = {
-			BACKSPACE : 8,
-			TAB : 9,
-			LEFT : 37,
-			RIGHT: 39,
-			UP : 38,
-			DOWN : 40,
-			DELETE : 46
-		}
-
-		const FocusAction = {
-			NONE : 0,
-			NEXT : 1,
-			PREV : 2,
-			UP : 3,
-			DOWN : 4
-		}
-
-		// ignore when inactive or disabled
-		if(this != document.activeElement){ return; }
-		if(this.disabled){ return; }
-		if(this.focusedCell == null){ return; };
-
-		let focusedCell = this.getCell(this.focusedCell[0], this.focusedCell[1]);
-
-		evt.preventDefault();
-		console.log("boggle :: pressed " + evt.keyCode);
-
-		let focusAction = FocusAction.NONE;
-
-		// handle alpha input
-		if(evt.keyCode &gt;= 65 &amp;&amp; evt.keyCode &lt;= 90){
-			console.log("boggle :: alpha input");
-			let char = String.fromCharCode(evt.keyCode);
-			focusedCell.textContent = char;
-			focusAction = FocusAction.NEXT;
-		}
-		// handle numeric input
-		if(evt.keyCode &gt;= 48 &amp;&amp; evt.keyCode &lt;= 57){
-			console.log("boggle :: numeric input");
-			let char = String.fromCharCode(evt.keyCode);
-			focusedCell.textContent = char;
-			focusAction = FocusAction.NEXT;
-		}
-		// handle deletion
-		if(evt.keyCode == Key.BACKSPACE){
-			focusedCell.textContent = "";
-			focusAction = FocusAction.PREV;
-		}
-		if(evt.keyCode == Key.DELETE){
-			focusedCell.textContent = "";
-			focusAction = FocusAction.NONE;
-		}
-
-		// handle direction keys
-		if(evt.keyCode == Key.LEFT){ focusAction = FocusAction.PREV; }
-		if(evt.keyCode == Key.RIGHT){ focusAction = FocusAction.NEXT; }
-		if(evt.keyCode == Key.UP){ focusAction = FocusAction.UP; }
-		if(evt.keyCode == Key.DOWN){ focusAction = FocusAction.DOWN; }
-
-		if(focusAction == FocusAction.NONE){ return; }
-		
-		if(this.highlightCells == null){
-			let row = this.focusedCell[0];
-			let col = this.focusedCell[1];
-			let disabled = true;
-			let cell = this.getCell(row, col);
-
-			//TODO:  what if entire row/col is disabled?
-			while(disabled &amp;&amp; focusAction != FocusAction.NONE){
-
-				if(focusAction == FocusAction.PREV){
-					[row, col] = this.cellPosPrev(row, col);
-				}
-				if(focusAction == FocusAction.NEXT){
-					[row, col] = this.cellPosNext(row, col);
-				}
-				if(focusAction == FocusAction.UP){
-					row = mod( (row - 1), this.numRows);
-				}
-				if(focusAction == FocusAction.DOWN){
-					row = mod( (row + 1), this.numRows);
-				}
-
-				cell = this.getCell(row, col);
-				disabled = cell.hasAttribute("disabled") &amp;&amp; cell.getAttribute("disabled") != "false";
-			}
-
-			cell.focus();
-		} else {
-			let disabled = true;
-			let cell = this.highlightCells[this.highlightFocusIdx];
-
-			//TODO:  what if entire row/col is disabled?
-			while(disabled &amp;&amp; focusAction != FocusAction.NONE){
-
-				if(focusAction == FocusAction.PREV){
-					this.highlightFocusIdx = mod(this.highlightFocusIdx - 1, this.highlightCells.length);
-				}
-				if(focusAction == FocusAction.NEXT){
-					this.highlightFocusIdx = mod(this.highlightFocusIdx + 1, this.highlightCells.length);
-				}
-				if(focusAction == FocusAction.UP){
-					// TODO (up row/col)
-				}
-				if(focusAction == FocusAction.DOWN){
-					// TODO (down row/col)
-				}
-
-				cell = this.highlightCells[this.highlightFocusIdx];
-				disabled = cell.hasAttribute("disabled") &amp;&amp; cell.getAttribute("disabled") != "false";
-			}
-
-			cell.focus();
-		}
-	}
-
-	cellPosNext(row, col){
-		if(col + 1 &gt;= this.numCols){
-			return [ mod(row + 1, this.numRows), 
-			         mod(col + 1, this.numCols) ];
-		} else {
-			return [ row, col + 1];
-		}
-	}
-	
-	cellPosPrev(row, col){
-		if(col - 1 &lt; 0){
-			return [ mod(row - 1, this.numRows), mod(col - 1, this.numCols) ];
-		} else {
-			return [ row, col - 1];
-		}
-	}
-
-	//////////////////////////////////////////////////////////////////
-
-	/* RESETBOARD
-	 * Modifies the board to match the current dimensions (numRows/numCols).
-	 */
-	resetBoard(){
-		console.log("boggle :: resetBoard()");
-
-		// unhighlight
-		this.unhighlight();
-
-		// remove rows as needed
-		while(this.boardBody.children.length &gt; this.numRows){
-			this.boardBody.removeChild(this.boardBody.lastChild);
-		}
-		// create rows as needed
-		while(this.boardBody.children.length &lt; this.numRows){
-			let tr = document.createElement("tr");
-			this.boardBody.appendChild(tr);
-		}
-
-		// modify existing rows add/remove cols as needed
-		for(let rowIdx = 0; rowIdx &lt; this.numRows; rowIdx++){
-			let rowElement = this.boardBody.children[rowIdx];
-			// remove cols as needed
-			while(rowElement.children.length &gt; this.numCols){
-				rowElement.removeChild(rowElement.lastChild);
-			}
-			// create cols as needed
-			while(rowElement.children.length &lt; this.numCols){
-				let td = document.createElement("td");
-				let colIdx = rowElement.children.length;
-				td.setAttribute("tabindex", 0);
-				td.addEventListener("click", 
-					evt =&gt; this.handleClick(rowIdx, colIdx)
-				);
-				td.addEventListener("focus", 
-					evt =&gt; this.handleFocus(rowIdx, colIdx)
-				);
-				rowElement.appendChild(td);
-			}
-		}
-	}
-
-	//////////////////////////////////////////////////////////////////
-
-	fromString(input){
-		// if input empty, fail gracefully
-		if(!input){ return null; }
-		input = input.trim();
-		if(input.length == 0){ return null; }
-		
-		// parse input and validate dimensions
-		let lines = input.split("\n");
-		let numRows = lines.length;
-		if(numRows &lt; 1){ return null; }
-		
-		let numCols = 0;
-		let data = [];
-
-		for(let r = 0; r &lt; numRows; r++){
-			let line = lines[r].split("");
-
-			// first row determines numCols
-			if(r == 0){ numCols = line.length; }
-			else if(line.length != numCols){ return null; }
-
-			// handle blank / disabled cells
-			for(let c = 0; c &lt; numCols; c++){
-				if(line[c] == "_"){
-					line[c] = "";
-				} else if(line[c] == "@"){
-					line[c] = null;
-				}
-			}
-
-			data.push(line);
-		}
-		
-		return {
-			numRows : numRows,
-			numCols : numCols,
-			data : data
-		};
-	}
-
-	//// CALLBACKS ///////////////////////////////////////////////////
-
-	connectedCallback(){
-		console.log("boggle :: connectedCallback");
-
-		// ISSUE: TextContent may not always exist when `connectedCallback()`
-		// is called.  See for example:
-		//    &gt; https://github.com/WebReflection/html-parsed-element
-		//    &gt; https://stackoverflow.com/questions/48498581/textcontent-empty-in-connectedcallback-of-a-custom-htmlelement
-		if(this.textContent){
-			let boardData = this.fromString(this.textContent);
-
-			if(boardData){
-				this.numRows = boardData.numRows;
-				this.numCols = boardData.numCols;
-
-				for(let r = 0; r &lt; this.numRows; r++){
-					for(let c = 0; c &lt; this.numCols; c++){
-						// TODO: make it easier to iterate over cells without
-						// depending on specific structure as a table
-						let data = boardData.data[r][c];
-						let cell = this.getCell(r,c);
-
-						if(data)          { cell.textContent = data; }
-						if(data === null) {
-							cell.classList.add("void");
-							cell.setAttribute("disabled","");
-							cell.removeAttribute("tabindex","");
-						}
-					}
-				}
-			}
-		}
-
-		this.resetBoard();
-	}
-
-	attributeChangedCallback(name, oldValue, newValue){
-		if(oldValue == newValue) return;
-		console.log(`boggle :: attribute changed (${name}, ${oldValue}, ${newValue})`);
-		
-		switch(name){
-			case "rows": this.numRows = newValue; break;
-			case "cols": this.numCols = newValue; break;
-			case "type":
-				this.gameType = newValue;
-		}
-
-		// when disabled, remove from tab order
-		if (this.disabled) {
-			this.boardElement.setAttribute('tabindex', '-1');
-			this.setAttribute('aria-disabled', 'true');
-		} else {
-			this.boardElement.setAttribute('tabindex', '0');
-			this.setAttribute('aria-disabled', 'false');
-		}
-	}
-
-	//// PROPERTIES //////////////////////////////////////////////////
-
-	// observed attributes
-
-	static get observedAttributes(){
-		return ["disabled", "cols", "rows", "type"];
-	}
-
-	// disabled
-
-	get disabled() {
-		return this.hasAttribute("disabled");
-	}
-
-	set disabled(val) {
-		if(val){ this.setAttribute("disabled", ""); }
-		else   { this.removeAttribute("disabled");  }
-	}
-
-	// dimensions
-
-	get numRows() { return Number(this.getAttribute("rows")) || 4; }
-	get numCols() { return Number(this.getAttribute("cols")) || 4; }
-	set numRows(count) { 
-		this.setAttribute("rows", (count &gt; 0) ? count : 0 );
-		this.resetBoard();
-	}
-	set numCols(count) {
-		this.setAttribute("cols", (count &gt; 0) ? count : 0 );
-		this.resetBoard();
-	}
-
-	getCell(row, col){
-		return this.boardBody.children[row].children[col];
-	}
-	getFocusedCell(row, col){
-		return this.boardBody.children[row].children[col];
-	}
-
-	// Selection -----------------------------------------------------
-
-	unhighlight(){
-		if(!this.highlightCells) { return; }
-
-		for(let k = 0; k &lt; this.highlightCells.length; k++){
-			this.highlightCells[k].classList.remove("highlight");
-		}
-		
-		this.highlightCells = null;
-	}
-
-	// selection
-
-	cellIsDisabled(row, col){
-		let cell = this.getCell(row,col);
-		return (cell.hasAttribute("disabled") &amp;&amp; cell.getAttribute("disabled") != "false");
-	}
-
-	highlight(coords, focusIdx=0){
-		if(!coords){ this.unselect(); return; }
-
-		this.unhighlight();
-		this.highlightCells = [];
-		for(let k = 0; k &lt; coords.length; k++){
-			let pos = coords[k];
-			let cell = this.getCell(pos[0], pos[1]);
-			this.highlightCells.push(cell);
-			cell.classList.add("highlight");
-		}
-
-		if(this.highlightCells.length &gt; 0){
-			this.highlightFocusIdx = focusIdx;
-			this.highlightCells[focusIdx].focus();
-		} else {
-			this.highlightCells = null;
-			this.highlightFocusIdx = -1;
-		}
-	}
-
-	highlightRow(row, focusCol=0){
-		console.log(`boggle :: highlightRow (${row}, ${focusCol})`);
-		if(row &lt; 0 || row &gt; this.numRows){ this.unhighlight(); return; }
-
-		let coords = [];
-		for(let c = 0; c &lt; this.numCols; c++){
-			coords.push([row,c]);
-		}
-		
-		if(focusCol &lt; 0) { focusCol = 0; }
-		if(focusCol &gt; coords.length) { focusCol = coords.length; }
-		this.highlight(coords, focusCol);
-	}
-
-	highlightCol(col, focusRow=0){
-		if(col &lt; 0 || col &gt; this.numCols){ this.unhighlight(); return; }
-
-		let coords = [];
-		for(let r = 0; r &lt; this.numRows; r++){
-			coords.push([r,col]);
-		}
-
-		this.highlight(coords, focusRow);
-	}
-}
-
-window.customElements.define("grid-game", GridGameElement);
-&lt;/script&gt;
+&lt;ul&gt;
+&lt;li&gt;Apparently, there was once a &lt;a href="https://www.youtube.com/watch?v=ydXk65iekio&amp;amp;feature=emb_logo"&gt;game show&lt;/a&gt; based on Boggle!&lt;/li&gt;
+&lt;li&gt;Historical crossword data is surprisingly hard to come by, as crossword re-sale is serious business for the New York Times.  Crossword dictionaries curated by &lt;a href="https://www.xwordinfo.com/WordList/"&gt;seasoned solvers&lt;/a&gt; can cost upwards of $200!&lt;/li&gt;
+&lt;li&gt;&lt;/li&gt;
+&lt;li&gt;&lt;/li&gt;
+&lt;/ul&gt;
 
 </content><category term="algorithms"></category><category term="satisfiability"></category></entry><entry><title>Hough Transform</title><link href="https://benrbray.com/posts/2020/hough-transform" rel="alternate"></link><published>2020-01-10T00:00:00-05:00</published><updated>2020-01-10T00:00:00-05:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2020-01-10:/posts/2020/hough-transform</id><summary type="html">&lt;p&gt;Detect lines in an image with the Hough transform.&lt;/p&gt;</summary><content type="html"></content><category term="image-processing"></category></entry><entry><title>Newton's Method, Optimization, and Root-finding</title><link href="https://benrbray.com/posts/2019/newtons-method-optimization-and-root-finding" rel="alternate"></link><published>2019-08-21T00:00:00-04:00</published><updated>2019-08-21T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2019-08-21:/posts/2019/newtons-method-optimization-and-root-finding</id><summary type="html">&lt;p&gt;There are two versions of Newton's method, one for root-finding, &lt;span class="math"&gt;\(f(x) = 0\)&lt;/span&gt;, and one for optimization, &lt;span class="math"&gt;\(min_{x \in \R^n} f(x)\)&lt;/span&gt;.  In this post, I show explicitly that Newton's method for optimization is simply Newton's method applied to finding fixed points of the gradient map &lt;span class="math"&gt;\(x \mapsto \nabla x f\)&lt;/span&gt;.&lt;/p&gt;</summary><content type="html">&lt;h1&gt;Newton's Method for Root-finding&lt;/h1&gt;
 &lt;div class="math"&gt;$$
@@ -793,7 +600,12 @@ then by Lemma \ref{lemma:gue-invariance}, the algorithm &lt;span class="math"&gt
 &lt;h1&gt;Discussion&lt;/h1&gt;
 &lt;p&gt;We have described several basic results in random matrix theory and developed an algorithm for sampling unitary matrices in a uniform way.  The corrected algorithm in the previous section is a special case of the remarkably general &lt;em&gt;subgroup algorithm&lt;/em&gt; (Diaconis 1987), in which uniform random samples from a group &lt;span class="math"&gt;\(G_n\)&lt;/span&gt; are built up from successive uniform samples from a chain of subgroups &lt;span class="math"&gt;\(G_1 \subset G_2 \subset \cdots G_n\)&lt;/span&gt;.  The Fisher-Yates shuffle is a well-known realization of the subgroup algorithm.  The algorithm is very general, but the main difficulty is generating samples from the quotient groups &lt;span class="math"&gt;\(G_{k} / G_{k-1}\)&lt;/span&gt;.&lt;/p&gt;
 &lt;p&gt;For our specific problem of generating random unitary matrices, we were able to prove that the corrected method produces a result distributed according to Haar measure.  When designing sampling procedures for more complicated structures, this may not be possible, and there has been some work on developing statistical tests on manifolds to determine whether the target distribution has been met (Sepheri 2016).&lt;/p&gt;
-&lt;p&gt;I am aware that Lie groups are commonly used in motion planning; the valid orientations of a robot or vehicle form a manifold in configuration space, and there is a group of transformations which describe the allowed behavior.  I strongly suspect that the strategies used in this report could be used to randomly sample valid configurations, which could be useful in simulation or gaming applications.&lt;/p&gt;</content></entry><entry><title>Collision Detection with the Separating Axis Theorem</title><link href="https://benrbray.com/posts/2017/collision-detection-with-the-separating-axis-theorem" rel="alternate"></link><published>2017-06-17T00:00:00-04:00</published><updated>2017-06-17T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2017-06-17:/posts/2017/collision-detection-with-the-separating-axis-theorem</id><content type="html">&lt;p&gt;In geometry, the hyperplane separation theorem is a theorem about disjoint convex sets in n-dimensional Euclidean space. There are several rather similar versions. In one version of the theorem, if both these sets are closed and at least one of them is compact, then there is a hyperplane in between them and even two parallel hyperplanes in between them separated by a gap. In another version, if both disjoint convex sets are open, then there is a hyperplane in between them, but not necessarily any gap. An axis which is orthogonal to a separating hyperplane is a separating axis, because the orthogonal projections of the convex bodies onto the axis are disjoint.&lt;/p&gt;</content></entry><entry><title>Generating Random Samples</title><link href="https://benrbray.com/posts/2017/generating-random-samples" rel="alternate"></link><published>2017-06-17T00:00:00-04:00</published><updated>2017-06-17T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2017-06-17:/posts/2017/generating-random-samples</id><content type="html">&lt;p&gt;What is the most effective way to generate random samples, assuming we have access to a pseudorandom number generator?  In this post, we'll explore several common algorithms.&lt;/p&gt;</content></entry><entry><title>Digital Humanities &amp; German Periodicals</title><link href="https://benrbray.com/posts/2016/digital-humanities-german-periodicals" rel="alternate"></link><published>2016-12-01T00:00:00-05:00</published><updated>2016-12-01T00:00:00-05:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2016-12-01:/posts/2016/digital-humanities-german-periodicals</id><summary type="html">&lt;p&gt;As an undergraduate research assistant, I spent three years as the primary developer for an NLP-driven web application built to assist a humanities professor with his research on 19th-century German literature.  The application allowed him to run statistical topic models (LDA, HDP, dynamic topic models, etc.) on a large corpus of text, and displayed helpful visualizations of the results.  The application was built using Python / Flask / Bootstrap and also supported toponym detection and full-text search.&lt;/p&gt;</summary><content type="html">&lt;h1&gt;Overview&lt;/h1&gt;
+&lt;p&gt;I am aware that Lie groups are commonly used in motion planning; the valid orientations of a robot or vehicle form a manifold in configuration space, and there is a group of transformations which describe the allowed behavior.  I strongly suspect that the strategies used in this report could be used to randomly sample valid configurations, which could be useful in simulation or gaming applications.&lt;/p&gt;</content></entry><entry><title>Collision Detection: Minkowski Sum</title><link href="https://benrbray.com/posts/2018/collision-detection-minkowski-sum" rel="alternate"></link><published>2018-04-27T00:00:00-04:00</published><updated>2018-04-27T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2018-04-27:/posts/2018/collision-detection-minkowski-sum</id><summary type="html">&lt;p&gt;Introduces the Minkowski sum and its applications to game physics.&lt;/p&gt;</summary><content type="html">&lt;h1&gt;Convex Geometry&lt;/h1&gt;
+&lt;h1&gt;Minkowski Sum&lt;/h1&gt;</content><category term="geometry"></category><category term="linear-algebra"></category><category term="game-dev"></category><category term="graphics"></category></entry><entry><title>Molecules</title><link href="https://benrbray.com/posts/2018/molecules" rel="alternate"></link><published>2018-03-01T00:00:00-05:00</published><updated>2018-03-01T00:00:00-05:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2018-03-01:/posts/2018/molecules</id><summary type="html">&lt;p&gt;Simulation of molecules with hydrodynamic interactions.&lt;/p&gt;</summary><content type="html"></content><category term="algorithms"></category><category term="simulation"></category></entry><entry><title>Collision Detection: Separating Axis Theorem</title><link href="https://benrbray.com/posts/2017/collision-detection-separating-axis-theorem" rel="alternate"></link><published>2017-06-17T00:00:00-04:00</published><updated>2017-06-17T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2017-06-17:/posts/2017/collision-detection-separating-axis-theorem</id><content type="html">&lt;p&gt;In geometry, the hyperplane separation theorem is a theorem about disjoint convex sets in n-dimensional Euclidean space. There are several rather similar versions. In one version of the theorem, if both these sets are closed and at least one of them is compact, then there is a hyperplane in between them and even two parallel hyperplanes in between them separated by a gap. In another version, if both disjoint convex sets are open, then there is a hyperplane in between them, but not necessarily any gap. An axis which is orthogonal to a separating hyperplane is a separating axis, because the orthogonal projections of the convex bodies onto the axis are disjoint.&lt;/p&gt;</content><category term="geometry"></category><category term="linear-algebra"></category><category term="game-dev"></category><category term="graphics"></category></entry><entry><title>Generating Random Samples</title><link href="https://benrbray.com/posts/2017/generating-random-samples" rel="alternate"></link><published>2017-06-17T00:00:00-04:00</published><updated>2017-06-17T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2017-06-17:/posts/2017/generating-random-samples</id><summary type="html">&lt;p&gt;What is the most effective way to generate random samples, assuming we have access to a pseudorandom number generator?  In this post, we'll explore several common algorithms.&lt;/p&gt;</summary><content type="html">&lt;p&gt;What is the most effective way to generate random samples, assuming we have access to a pseudorandom number generator?  In this post, we'll explore several common algorithms.&lt;/p&gt;
+&lt;h1&gt;Fisher-Yates Shuffle&lt;/h1&gt;
+&lt;h1&gt;Subgroup Algorithm&lt;/h1&gt;
+&lt;h1&gt;Random Matrices&lt;/h1&gt;
+&lt;h1&gt;Backbite Algorithm for Hamiltonian Paths&lt;/h1&gt;</content></entry><entry><title>Digital Humanities &amp; German Periodicals</title><link href="https://benrbray.com/posts/2016/digital-humanities-german-periodicals" rel="alternate"></link><published>2016-12-01T00:00:00-05:00</published><updated>2016-12-01T00:00:00-05:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2016-12-01:/posts/2016/digital-humanities-german-periodicals</id><summary type="html">&lt;p&gt;As an undergraduate research assistant, I spent three years as the primary developer for an NLP-driven web application built to assist a humanities professor with his research on 19th-century German literature.  The application allowed him to run statistical topic models (LDA, HDP, dynamic topic models, etc.) on a large corpus of text, and displayed helpful visualizations of the results.  The application was built using Python / Flask / Bootstrap and also supported toponym detection and full-text search.&lt;/p&gt;</summary><content type="html">&lt;h1&gt;Overview&lt;/h1&gt;
 &lt;p&gt;As an undergraduate research assistant, I spent three years as the primary developer for an NLP-driven web application built to assist a humanities professor (&lt;a href="https://lsa.umich.edu/german/people/faculty/pmcisaac.html"&gt;Dr. Peter McIsaac&lt;/a&gt;, University of Michigan) with his research on 19th-century German literature.  The application allowed him to run statistical topic models (&lt;a href="http://jmlr.org/papers/volume3/blei03a/blei03a.pdf"&gt;LDA&lt;/a&gt;, &lt;a href="http://proceedings.mlr.press/v15/wang11a/wang11a.pdf"&gt;HDP&lt;/a&gt;, &lt;a href="https://mimno.infosci.cornell.edu/info6150/readings/dynamic_topic_models.pdf"&gt;DTM&lt;/a&gt;, etc.) on a large corpus of text and displayed helpful visualizations of the results.  The application was built using &lt;strong&gt;Python&lt;/strong&gt; / &lt;strong&gt;Flask&lt;/strong&gt; / &lt;strong&gt;Bootstrap&lt;/strong&gt; and also supported toponym detection and full-text search.  We used &lt;a href="https://radimrehurek.com/gensim/"&gt;&lt;code&gt;gensim&lt;/code&gt;&lt;/a&gt; for topic modeling.&lt;/p&gt;
 &lt;p&gt;Using the web application I built, my supervisor was able to effectively detect cultural and historical trends in a large corpus of previously unstudied documents&lt;span class="aside"&gt;This is a cheeky remark!&lt;/span&gt;.  Our efforts led to a number of publications in humanities journals and conferences, including &lt;a href="http://www.jstor.org/stable/10.7722/j.ctt5vj848.11"&gt;[McIsaac 2014]&lt;/a&gt;:&lt;/p&gt;
 &lt;blockquote class="citation"&gt;

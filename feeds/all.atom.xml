@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Benjamin R. Bray</title><link href="https://benrbray.com/" rel="alternate"></link><link href="http://localhost:8000/feeds/all.atom.xml" rel="self"></link><id>https://benrbray.com/</id><updated>2020-03-20T00:00:00-04:00</updated><entry><title>Real-time Game Physics</title><link href="https://benrbray.com/posts/2020/real-time-game-physics" rel="alternate"></link><published>2020-03-20T00:00:00-04:00</published><updated>2020-03-20T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2020-03-20:/posts/2020/real-time-game-physics</id><summary type="html">&lt;p&gt;Real-time Game Physics&lt;/p&gt;</summary><content type="html">&lt;p&gt;Collision Detection&lt;/p&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Benjamin R. Bray</title><link href="https://benrbray.com/" rel="alternate"></link><link href="http://localhost:8000/feeds/all.atom.xml" rel="self"></link><id>https://benrbray.com/</id><updated>2020-03-20T00:00:00-04:00</updated><entry><title>Real-time Game Physics</title><link href="https://benrbray.com/posts/2020/real-time-game-physics" rel="alternate"></link><published>2020-03-20T00:00:00-04:00</published><updated>2020-03-20T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2020-03-20:/posts/2020/real-time-game-physics</id><summary type="html">&lt;p&gt;Real-time Game Physics&lt;/p&gt;</summary><content type="html">&lt;h1&gt;Articles&lt;/h1&gt;
+&lt;p&gt;Collision Detection&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;Part 1:  Convex Geometry&lt;/li&gt;
 &lt;li&gt;&lt;a href="/posts/2018/collision-detection-minkowski-sum"&gt;Part 2:  Minkowski Sum&lt;/a&gt;&lt;/li&gt;
@@ -19,7 +20,201 @@
 &lt;p&gt;Practical Game Physics&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;Part 12: Bounding Volume Hierarchies&lt;/li&gt;
-&lt;/ul&gt;</content><category term="geometry"></category><category term="game-dev"></category><category term="linear-algebra"></category></entry><entry><title>Collision Detection: GJK &amp; EPA</title><link href="https://benrbray.com/posts/2020/collision-detection-gjk-epa" rel="alternate"></link><published>2020-03-18T00:00:00-04:00</published><updated>2020-03-18T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2020-03-18:/posts/2020/collision-detection-gjk-epa</id><content type="html">&lt;p&gt;The Gilbert–Johnson–Keerthi distance algorithm is a method of determining the minimum distance between two convex sets. Unlike many other distance algorithms, it does not require that the geometry data be stored in any specific format, but instead relies solely on a support function to iteratively generate closer simplices to the correct answer using the configuration space obstacle (CSO) of two convex shapes, more commonly known as the Minkowski difference.&lt;/p&gt;</content><category term="geometry"></category><category term="linear-algebra"></category><category term="game-dev"></category><category term="graphics"></category></entry><entry><title>Boggle / Unboggle</title><link href="https://benrbray.com/posts/2020/boggle-unboggle" rel="alternate"></link><published>2020-03-02T00:00:00-05:00</published><updated>2020-03-02T00:00:00-05:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2020-03-02:/posts/2020/boggle-unboggle</id><summary type="html">Finds all words in a boggle board using the trie data structure.</summary><content type="html">
+&lt;/ul&gt;
+&lt;h1&gt;References&lt;/h1&gt;
+&lt;ul&gt;
+&lt;li&gt;Math StackExchange, &lt;a href="https://math.stackexchange.com/questions/1709498/minkowski-sum-and-vectors?rq=1"&gt;Minkowski Sum and Vectors&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Convex Geometry&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;StackExchange, &lt;a href="https://stackoverflow.com/questions/217578/how-can-i-determine-whether-a-2d-point-is-within-a-polygon?page=1&amp;amp;tab=active#tab-top"&gt;How to Determine Whether 2D Point is within Polygon&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;CGAL, &lt;a href="https://doc.cgal.org/latest/Minkowski_sum_2/"&gt;"Minkowski Sums"&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Math StackExchange, &lt;a href="https://math.stackexchange.com/questions/985448/proof-minkowski-sum-polytope-implies-a-and-b-polytopes"&gt;Proof: Minkowski sum polytope implies A and B polytopes&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Collisions&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Stanford, &lt;a href="http://graphics.stanford.edu/~jgao/collision-detection.html"&gt;Collision Detection Links&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;StackExchange, &lt;a href="https://stackoverflow.com/questions/28265431/how-to-interpolate-multiple-high-speed-polygon-collisions-2d"&gt;How to interpolate multiple high speed polygon collisions (2D)?&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Hamelot, &lt;a href="https://hamelot.io/dynamics/material-point-method-mpm-reference/"&gt;Material Point Method&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Allen Chou, &lt;a href="http://allenchou.net/2013/12/game-physics-collision-detection-csos-support-functions/"&gt;Collision Detection - CSO &amp;amp; Support Function&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Neumayr &amp;amp; Otter, &lt;a href="https://modiasim.github.io/Modia3D.jl/resources/documentation/CollisionHandling_Neumayr_Otter_2017.pdf"&gt;"Collision Handling with Variable-Step Integrators"&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;GameDev.net, &lt;a href="https://www.gamedev.net/forums/topic/607711-penetration-depth-and-direction/"&gt;"Penetration Depth and Direction"&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;MyPhysicsLab, &lt;a href="https://www.myphysicslab.com/engine2D/collision-methods-en.html"&gt;Multiple Simultaneous Collisions&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Misc&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Hamelot, &lt;a href="https://hamelot.io/dynamics/rigid-body-dynamics-part-1/"&gt;Rigid Body Dynamics&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Pokutta, &lt;a href="http://www.pokutta.com/blog/research/2019/11/30/approxCara-abstract.html"&gt;Approximate Caratheodory via Frank-Wolfe&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Macklin et al. 2019, &lt;a href="https://arxiv.org/pdf/1907.04587.pdf"&gt;Non-smooth Newton Methods for Deformable Multi-body Dynamics&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Glatki, &lt;a href="https://www-i2.informatik.rwth-aachen.de/i2/fileadmin/user_upload/documents/HybridSystemsGroup/Bachelor_Master_theses/glatki_master.pdf"&gt;A Zonotope Library for Hybrid Systems Reachability Analysis&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Separating Axis Theorem&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Dyn4J, &lt;a href="http://www.dyn4j.org/2010/01/sat/"&gt;Separating Axis Theorem&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Math StackExchange, &lt;a href="https://math.stackexchange.com/questions/2106402/proof-of-separating-axis-theorem-for-polygons"&gt;Proof of Separating Axis Theorem for Polygons&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Continuous Collision Detection&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Van den Bergen 2004, &lt;a href="http://www.dtecta.com/papers/unpublished04raycast.pdf"&gt;Ray Casting against General Convex Objects with Application to Continuous Collision Detection&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;WildBunny, &lt;a href="https://wildbunny.co.uk/blog/2011/04/20/collision-detection-for-dummies/"&gt;Collision Detection for Dummies&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;GameDev StackExchange, &lt;a href="https://gamedev.stackexchange.com/questions/55873/hexagon-collision-detection-for-fast-moving-objects"&gt;Hexagon Collision for Fast-Moving Objects?&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Gilbert-Johnson-Keerthi (GJK) Algorithm&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Casey Muratori 2006, &lt;a href="https://caseymuratori.com/blog_0003"&gt;Implementing GJK&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Oxford, &lt;a href="http://www.cs.ox.ac.uk/people/stephen.cameron/distances/"&gt;Computing Distance Between Objects&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Montanari 2016, &lt;a href="https://ora.ox.ac.uk/objects/uuid:69c743d9-73de-4aff-8e6f-b4dd7c010907/download_file?safe_filename=GJK.PDF&amp;amp;file_format=application%2Fpdf&amp;amp;type_of_work=Journal+article"&gt;Improving the GJK algorithm for faster and more reliable
+distance queries between convex objects&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;LGGMonclar, &lt;a href="https://lggmonclar.github.io/2019/03/06/visualizing_gjk.html"&gt;Visualizing GJK in 3D&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Lindemann, &lt;a href="https://www.medien.ifi.lmu.de/lehre/ss10/ps/Ausarbeitung_Beispiel.pdf"&gt;GJK Distance Algorithm&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Dyn4J, &lt;a href="http://www.dyn4j.org/2010/04/gjk-distance-closest-points/"&gt;GJK Distance and Closest Points&lt;/a&gt; and &lt;a href="http://www.dyn4j.org/2010/04/gjk-gilbert-johnson-keerthi/"&gt;GJK&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Linahan, &lt;a href="https://arxiv.org/ftp/arxiv/papers/1505/1505.07873.pdf"&gt;Geometric Interpretation of GJK&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Kroitor, &lt;a href="https://github.com/kroitor/gjk.c"&gt;GJK.c&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Allen Chou, &lt;a href="http://allenchou.net/2013/12/game-physics-collision-detection-gjk/"&gt;Game Physics : GJK&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Expanding Polytope Algorithm&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;Dyn4J, &lt;a href="http://www.dyn4j.org/2010/05/epa-expanding-polytope-algorithm/"&gt;Expanding Polytope Algorithm&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;YouTube, &lt;a href="https://www.youtube.com/watch?v=6rgiPrzqt9w"&gt;EPA Visualization&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;GameDev.net, &lt;a href="https://www.gamedev.net/forums/topic/649946-epa-expanding-polytope-algorithm/"&gt;EPA (Expanding Polytope Algorithm)&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Van den Bergen, &lt;a href="http://graphics.stanford.edu/courses/cs468-01-fall/Papers/van-den-bergen.pdf"&gt;Proximity Queries and Penetration Depth
+Computation on 3D Game Objects&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Minkowski Portal Refinement&lt;/p&gt;
+&lt;ul&gt;
+&lt;li&gt;StackExchange, &lt;a href="https://gamedev.stackexchange.com/questions/84562/minkowski-portal-refinement-collision-detection-algorithm"&gt;MPR Collision Detection Algorithm&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Newth 2013, &lt;a href="https://scholarworks.sjsu.edu/etd_projects/311/"&gt;MPR and Speculative Contacts in Box2D&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;BulletPhysics, &lt;a href="https://github.com/bulletphysics/bullet3/pull/280"&gt;Minkowski Portal Refinement and FEM&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;PyBullet, &lt;a href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=1964"&gt;Minkowski Portal Refinement and 2D&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;PyBullet Forum, &lt;a href="https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=1964&amp;amp;start=15"&gt;Re: Minkowski Portal Refinement (MPR) for 2D&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;XenoCollide, &lt;a href="http://xenocollide.snethen.com/mpr2d.html"&gt;Minkowski Portal refinement&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;XenoCollide, &lt;a href="http://xenocollide.snethen.com/"&gt;Homepage&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Chris Pollett, &lt;a href="http://www.cs.sjsu.edu/faculty/pollett/masters/Semesters/Spring12/josh/?mpr_report.html"&gt;Minkowski Portal Refinement&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</content><category term="geometry"></category><category term="game-dev"></category><category term="linear-algebra"></category></entry><entry><title>Collision Detection: Convex Geometry</title><link href="https://benrbray.com/posts/2020/collision-detection-convex-geometry" rel="alternate"></link><published>2020-03-18T00:00:00-04:00</published><updated>2020-03-18T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2020-03-18:/posts/2020/collision-detection-convex-geometry</id><summary type="html">Working with convex polygons.</summary><content type="html">
+
+&lt;script src="/static/geom/dist/index.js"&gt;&lt;/script&gt;
+
+&lt;style&gt;
+.edge {
+	stroke: #00f;
+}
+.pending {
+	stroke-dasharray: 4,4;
+	stroke-width: 4;
+	animation: dash 0.5s linear infinite;
+}
+
+@keyframes dash {
+	0% { stroke-dashoffset: 0; }
+	100%{ stroke-dashoffset: 8; }
+}
+&lt;/style&gt;
+
+&lt;div id="fig1" style="border: 1px solid gray"&gt;&lt;/div&gt;
+
+&lt;svg viewbox="0 0 500 150" xmlns="http://www.w3.org/2000/svg"&gt;
+    &lt;defs&gt;
+        &lt;lineargradient id="Gradient-1"&gt;
+            &lt;stop offset="0%" stop-color="#bbc42a" /&gt;
+            &lt;stop offset="100%" stop-color="#765373" /&gt;
+        &lt;/lineargradient&gt;
+    &lt;/defs&gt;
+    &lt;rect x="10" y="10" width="200" height="100" fill="url(#Gradient-1)" stroke="#333333" stroke-width="3px" /&gt;
+		&lt;rect x="240" y="10" width="200" height="100" stroke-linejoin="round" stroke-dasharray="8,4" stroke-width="2" stroke="#000000" fill="none" /&gt;
+&lt;/svg&gt;
+
+# Geom Demo
+# Algorithms for Convex Geometry
+
+Convex and Affine Sets
+
+* Separating Hyperplane Theorem
+* Supporting Hyperplane Theorem
+
+Convex Polygons
+
+* Determine if sequence of vertices represents a convex polygon?
+* Point inside convex polygon?
+* Barycentric Coordinates
+	* Screen Space and the PS2
+
+Convex Primitives
+
+* Lines and Planes
+* Simplex
+
+Convex Hull
+
+* Compute Convex Hulls
+	* Gift Wrapping Algorithm
+	* Graham Scan
+	* Quickhull
+	* Chan's Algorithm
+* Convex Hull of a Simple Polygon
+
+Cutting Shapes
+
+# Duality
+
+* Support Functions
+* Fenchel Conjugate
+* Representing Convex Shapes with Support Functions
+
+# Collision Detection
+
+Simple Collisions
+
+* Line-Line 
+* Ball-Line (bouncing ball demo)
+* Ball-Ball
+* Rect-Rect
+* Ball-Rect
+
+Principled Collision Detection
+
+</content><category term="geometry"></category><category term="linear-algebra"></category><category term="game-dev"></category><category term="graphics"></category></entry><entry><title>Collision Detection: GJK &amp; EPA</title><link href="https://benrbray.com/posts/2020/collision-detection-gjk-epa" rel="alternate"></link><published>2020-03-18T00:00:00-04:00</published><updated>2020-03-18T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2020-03-18:/posts/2020/collision-detection-gjk-epa</id><content type="html">&lt;p&gt;The Gilbert–Johnson–Keerthi distance algorithm is a method of determining the minimum distance between two convex sets. Unlike many other distance algorithms, it does not require that the geometry data be stored in any specific format, but instead relies solely on a support function to iteratively generate closer simplices to the correct answer using the configuration space obstacle (CSO) of two convex shapes, more commonly known as the Minkowski difference.&lt;/p&gt;</content><category term="geometry"></category><category term="linear-algebra"></category><category term="game-dev"></category><category term="graphics"></category></entry><entry><title>SVG</title><link href="https://benrbray.com/posts/2020/svg" rel="alternate"></link><published>2020-03-03T00:00:00-05:00</published><updated>2020-03-03T00:00:00-05:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2020-03-03:/posts/2020/svg</id><summary type="html">&lt;p&gt;What I've learned about the Scalable Vector Graphics (SVG) format.&lt;/p&gt;</summary><content type="html">&lt;h1&gt;Guides&lt;/h1&gt;
+&lt;ul&gt;
+&lt;li&gt;Joni Trythall, &lt;a href="https://svgpocketguide.com/book/"&gt;SVG Pocket Guide&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h1&gt;Libraries&lt;/h1&gt;
+&lt;h3&gt;&lt;a href="https://svgjs.com/docs/3.0/"&gt;&lt;code&gt;SVG.js&lt;/code&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;div id="container-svgjs"&gt;&lt;/div&gt;
+
+&lt;script src="https://cdn.jsdelivr.net/npm/@svgdotjs/svg.js@3.0/dist/svg.min.js"&gt;&lt;/script&gt;
+
+&lt;script type="module"&gt;
+let container = document.getElementById("container-svgjs");
+var draw = SVG().addTo(container).size(300, 300)
+var rect = draw.rect(100, 100).attr({ fill: '#f06' })
+&lt;/script&gt;
+
+&lt;h3&gt;&lt;a href="http://raphaeljs.com/"&gt;&lt;code&gt;Raphael&lt;/code&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;p&gt;Example:&lt;/p&gt;
+&lt;div id="container"&gt;&lt;/div&gt;
+
+&lt;script src="http://cdnjs.cloudflare.com/ajax/libs/raphael/2.1.0/raphael-min.js"&gt; &lt;/script&gt;
+
+&lt;p&gt;&lt;script&gt; 
+let container = document.getElementById("container");
+var paper = Raphael(container, 500, 300); 
+var dot = paper.circle(250, 150, 30).attr({ 
+fill: "#FFF", 
+stroke: "#000", 
+"stroke-width": 1 
+}); 
+&lt;/script&gt;&lt;/p&gt;
+&lt;h3&gt;&lt;code&gt;Paper.js&lt;/code&gt;&lt;/h3&gt;
+&lt;ul&gt;
+&lt;li&gt;The "swiss army knife" of Vector Graphics Scripting&lt;/li&gt;
+&lt;li&gt;Runs on top of HTML5 Canvas&lt;/li&gt;
+&lt;li&gt;Scene Graph / Document Object Model for vector graphics: Work with nested layers, groups, paths, compound paths, rasters, symbols etc.&lt;/li&gt;
+&lt;/ul&gt;
+&lt;h3&gt;&lt;a href="http://snapsvg.io/"&gt;&lt;code&gt;Snap.svg&lt;/code&gt;&lt;/a&gt;&lt;/h3&gt;
+&lt;h1&gt;Neat Examples&lt;/h1&gt;
+&lt;ul&gt;
+&lt;li&gt;Here Dragons Abound, &lt;a href="https://heredragonsabound.blogspot.com/2020/02/creating-pencil-effect-in-svg.html"&gt;Pencil Effect in SVG&lt;/a&gt;&lt;/li&gt;
+&lt;li&gt;Choc, &lt;a href="https://www.newline.co/choc/"&gt;Traceable Programming&lt;/a&gt;&lt;/li&gt;
+&lt;/ul&gt;</content><category term="svg"></category><category term="drawing"></category></entry><entry><title>Boggle / Unboggle</title><link href="https://benrbray.com/posts/2020/boggle-unboggle" rel="alternate"></link><published>2020-03-02T00:00:00-05:00</published><updated>2020-03-02T00:00:00-05:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2020-03-02:/posts/2020/boggle-unboggle</id><summary type="html">Finds all words in a boggle board using the trie data structure.</summary><content type="html">
 
 &lt;!-- TODO: import from file? --&gt;
 &lt;!-- Boggle Style --&gt;
@@ -221,22 +416,22 @@ window.customElements.define("grid-game", GridGameElement);
 	&lt;div class="checkboxes" style="grid-column-end:span 2"&gt;
 		&lt;!-- Boggle Dice --&gt;
 		&lt;label&gt;
-			&lt;input type="radio" name="randomize" value="boggle-dice" required checked="checked"&gt;
+			&lt;input type="radio" onclick="randomDice()" name="randomize" value="boggle-dice" required checked="checked"&gt;
 			&lt;span&gt;Boggle Dice&lt;/span&gt;
 		&lt;/label&gt;
 		&lt;!-- Frequency --&gt;
 		&lt;label&gt;
-			&lt;input type="radio" name="randomize" value="frequency" required&gt;
+			&lt;input type="radio" onclick="randomFreq()" name="randomize" value="frequency" required&gt;
 			&lt;span&gt;Frequency&lt;/span&gt;
 		&lt;/label&gt;
 		&lt;!-- Uniform --&gt;
 		&lt;label&gt;
-			&lt;input type="radio" name="randomize" value="uniform" required&gt;
+			&lt;input type="radio" onclick="randomUniform()" name="randomize" value="uniform" required&gt;
 			&lt;span&gt;Uniform&lt;/span&gt;
 		&lt;/label&gt;
 		&lt;!-- Long Word --&gt;
 		&lt;label&gt;
-			&lt;input type="radio" name="randomize" value="long-word" required&gt;
+			&lt;input type="radio" onclick="randomWord()" name="randomize" value="long-word" required&gt;
 			&lt;span&gt;Long Word&lt;/span&gt;
 		&lt;/label&gt;
 	&lt;/div&gt;

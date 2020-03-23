@@ -192,9 +192,6 @@ window.onload = function(){
 <!-- PRECONTENT -->
 <div id="pre-content">
 <!-- Article Banner Image -->
-<div class="page-banner">
-	<img src="https://benrbray.com/images/misc/long12.PNG"></img>
-</div>
 </div>
 
 <div id="page">
@@ -206,16 +203,16 @@ window.onload = function(){
 
 <!-- Post Header -->
 <header class="article-header">
-	<h1 class="article-title">Incompressible Fluid Simulation</h1>
+	<h1 class="article-title">SVG</h1>
 	<div class="article-info">
 		<!-- Date -->
 		<div class="article-date">
-			Posted in projects on August 21, 2015
+			Posted in articles on March 03, 2020
 		</div>
 		<!-- Tags / Tools -->
 			<nav class="article-tags">
-<a href="/tag/fluid-simulation">fluid-simulation</a><a href="/tag/graphics">graphics</a><a href="/tag/gpu">gpu</a><a href="/tag/numerical-methods">numerical-methods</a>					<a class="tool">c++</a>
-					<a class="tool"> cuda</a>
+<a href="/tag/svg">svg</a><a href="/tag/drawing">drawing</a>					<a class="tool">svg</a>
+					<a class="tool"> typescript</a>
 			</nav>
 	</div>
 </header>
@@ -226,12 +223,48 @@ window.onload = function(){
 <!-- Post Context -->
 <div class="article-content">
 	<div id="post-body">
-	<p>Simulation of two-dimensional incompressible flow with periodic boundary conditions, achieved by solving the Euler Equations in the frequency domain via the Fast Fourier Transform (FFT).  Written in Java.</p>
-<p><img alt="Fluid Simulation" src="https://benrbray.com/images/fluid.png"></p>
-<p>Based on the following excellent resources:</p>
+	<h1>Guides</h1>
 <ul>
-<li>Stam, Jos. Stable Fluids. SIGGRAPH 99, Los Angeles, CA.</li>
-<li>Bridson, Robert, and Matthias Müller-Fischer. Fluid Simulation. SIGGRAPH 07. Course Notes.</li>
+<li>Joni Trythall, <a href="https://svgpocketguide.com/book/">SVG Pocket Guide</a></li>
+</ul>
+<h1>Libraries</h1>
+<h3><a href="https://svgjs.com/docs/3.0/"><code>SVG.js</code></a></h3>
+<div id="container-svgjs"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@svgdotjs/svg.js@3.0/dist/svg.min.js"></script>
+
+<script type="module">
+let container = document.getElementById("container-svgjs");
+var draw = SVG().addTo(container).size(300, 300)
+var rect = draw.rect(100, 100).attr({ fill: '#f06' })
+</script>
+
+<h3><a href="http://raphaeljs.com/"><code>Raphael</code></a></h3>
+<p>Example:</p>
+<div id="container"></div>
+
+<script src="http://cdnjs.cloudflare.com/ajax/libs/raphael/2.1.0/raphael-min.js"> </script>
+
+<p><script> 
+let container = document.getElementById("container");
+var paper = Raphael(container, 500, 300); 
+var dot = paper.circle(250, 150, 30).attr({ 
+fill: "#FFF", 
+stroke: "#000", 
+"stroke-width": 1 
+}); 
+</script></p>
+<h3><code>Paper.js</code></h3>
+<ul>
+<li>The "swiss army knife" of Vector Graphics Scripting</li>
+<li>Runs on top of HTML5 Canvas</li>
+<li>Scene Graph / Document Object Model for vector graphics: Work with nested layers, groups, paths, compound paths, rasters, symbols etc.</li>
+</ul>
+<h3><a href="http://snapsvg.io/"><code>Snap.svg</code></a></h3>
+<h1>Neat Examples</h1>
+<ul>
+<li>Here Dragons Abound, <a href="https://heredragonsabound.blogspot.com/2020/02/creating-pencil-effect-in-svg.html">Pencil Effect in SVG</a></li>
+<li>Choc, <a href="https://www.newline.co/choc/">Traceable Programming</a></li>
 </ul>
 	</div>
 </div>

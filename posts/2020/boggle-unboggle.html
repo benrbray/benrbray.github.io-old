@@ -433,22 +433,22 @@ window.customElements.define("grid-game", GridGameElement);
 	<div class="checkboxes" style="grid-column-end:span 2">
 		<!-- Boggle Dice -->
 		<label>
-			<input type="radio" name="randomize" value="boggle-dice" required checked="checked">
+			<input type="radio" onclick="randomDice()" name="randomize" value="boggle-dice" required checked="checked">
 			<span>Boggle Dice</span>
 		</label>
 		<!-- Frequency -->
 		<label>
-			<input type="radio" name="randomize" value="frequency" required>
+			<input type="radio" onclick="randomFreq()" name="randomize" value="frequency" required>
 			<span>Frequency</span>
 		</label>
 		<!-- Uniform -->
 		<label>
-			<input type="radio" name="randomize" value="uniform" required>
+			<input type="radio" onclick="randomUniform()" name="randomize" value="uniform" required>
 			<span>Uniform</span>
 		</label>
 		<!-- Long Word -->
 		<label>
-			<input type="radio" name="randomize" value="long-word" required>
+			<input type="radio" onclick="randomWord()" name="randomize" value="long-word" required>
 			<span>Long Word</span>
 		</label>
 	</div>
@@ -607,7 +607,7 @@ I learned a number of interesting things working on this project!
 			Powered by <a href="http://blog.getpelican.com/">Pelican</a> and hosted on <a href="https://github.com/benrbray/benrbray.github.io-source">GitHub</a>.
 		</span>
 		<span style="float: right">
-			Last updated on March 19, 2020
+			Last updated on March 23, 2020
 		</span>
 	</div>
 </div>

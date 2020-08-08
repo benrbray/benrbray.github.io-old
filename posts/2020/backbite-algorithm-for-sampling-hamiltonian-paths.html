@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+    <!-- Metadata -->
+	<meta charset="utf-8">
+
+    <!-- Title -->
+	<title>Benjamin R. Bray</title>
+
+	<!-- Google Fonts -->
+	<link href="https://fonts.googleapis.com/css?family=Droid+Sans+Mono%7CDroid+Serif" rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i" rel="stylesheet">
+	<!-- Site Styles -->
+	<link rel="stylesheet" href="https://benrbray.com/theme/css/style.css" type="text/css">
+	<link rel="stylesheet" href="https://benrbray.com/theme/css/pygments.css" type="text/css">
+	<!-- Viewport Meta Tag for Mobile Site -->
+	<!-- https://developer.mozilla.org/en-US/docs/Mozilla/Mobile/Viewport_meta_tag) -->
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+
+	<!-- KaTeX -->
+	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0-beta/dist/katex.min.css" integrity="sha384-9tPv11A+glH/on/wEu99NVwDPwkMQESOocs/ZGXPoIiLE8MU/qkqUcZ3zzL+6DuH" crossorigin="anonymous">
+	<!-- The loading of KaTeX is deferred to speed up page rendering -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.10.0-beta/dist/katex.min.js" integrity="sha384-U8Vrjwb8fuHMt6ewaCy8uqeUXv4oitYACKdB0VziCerzt011iQ/0TqlSlv8MReCm" crossorigin="anonymous"></script>
+	<!-- To automatically render math in text elements, include the auto-render extension: -->
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.10.0-beta/dist/contrib/auto-render.min.js" integrity="sha384-aGfk5kvhIq5x1x5YdvCp4upKZYnA8ckafviDpmWEKp4afOZEqOli7gqSnh8I6enH" crossorigin="anonymous"
+		onload='renderMathInElement(document.body, {
+			delimiters : [
+			{left: "$$", right: "$$", display: true},
+			{left: "\\(", right: "\\)", display: false},
+			{left: "$", right: "$", display: false},
+			],
+			macros : {
+				"\\X" : "\\mathcal{X}",
+				"\\L" : "\\mathcal{L}",
+				"\\R" : "\\mathbb{R}",
+				"\\C" : "\\mathbb{C}",
+			}
+		});'></script>
+<link rel="stylesheet" href="https://benrbray.com/theme/css/article.css" type="text/css">
+
+<!-- Pygments -->
+<link rel="stylesheet" href="http://localhost:8000/theme/css/pygments.css" type="text/css">
+<!-- KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.10.0-beta/dist/katex.min.css" integrity="sha384-9tPv11A+glH/on/wEu99NVwDPwkMQESOocs/ZGXPoIiLE8MU/qkqUcZ3zzL+6DuH" crossorigin="anonymous">
+<!-- The loading of KaTeX is deferred to speed up page rendering -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.10.0-beta/dist/katex.min.js" integrity="sha384-U8Vrjwb8fuHMt6ewaCy8uqeUXv4oitYACKdB0VziCerzt011iQ/0TqlSlv8MReCm" crossorigin="anonymous"></script>
+<!-- To automatically render math in text elements, include the auto-render extension: -->
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.10.0-beta/dist/contrib/auto-render.min.js" integrity="sha384-aGfk5kvhIq5x1x5YdvCp4upKZYnA8ckafviDpmWEKp4afOZEqOli7gqSnh8I6enH" crossorigin="anonymous"
+	onload='renderMathInElement(document.body, {
+		delimiters : [
+		{left: "$$", right: "$$", display: true},
+		{left: "\\(", right: "\\)", display: false},
+		{left: "$", right: "$", display: false},
+		],
+		macros : {
+			"\\X" : "\\mathcal{X}",
+			"\\L" : "\\mathcal{L}",
+			"\\R" : "\\mathbb{R}",
+			"\\C" : "\\mathbb{C}",
+		}
+	});'></script><!-- Table of Contents -->
+<script>
+var headings = [];
+
+function buildTableOfContents(tocElement){
+	// get document headings
+	var pageContent = document.getElementById("post-body");
+	var headingTags = ["h1", "h2", "h3", "h4", "h5", "h6"];
+	var headings = getElementsByTagNames(pageContent, headingTags);
+	var headingData = [];
+	
+	// process headings
+	for(var k = 0; k < headings.length; k++){
+		// get heading data
+		var elem = headings[k];
+		var title = elem.innerText;
+		var id =  (k+1) + "-" + title.toLowerCase().replace(/\W+/g, "-");
+		var depth = parseInt(elem.tagName.substr(1));
+		
+		headingData.push({
+			url: "#" + id,
+			title: title,
+			depth: depth
+		})
+		
+		// set heading ids
+		elem.id = id;
+	};
+
+	// quit if no headings found
+	if(headingData.length < 1){
+		return;
+	}
+
+	// build table of contents
+	var toc = document.createElement("ol");
+	tocElement.innerHTML = "";
+	tocElement.appendChild(toc);
+	tocElement.className = "";
+
+	// queue of <ol> elements (length represents current depth)
+	var queue = [toc];
+
+	for(var k = 0; k < headingData.length; k++){
+		let heading = headingData[k];
+		
+		// pop the queue as needed
+		while(heading.depth < queue.length){
+			let last = queue.pop();
+			queue[queue.length-1].appendChild(last);
+		}
+
+		// create new <ol> as needed
+		while(heading.depth > queue.length){
+			let nested = document.createElement("ol");
+			queue.push(nested);
+		}
+
+		// add <li> for this heading
+		let listItem = document.createElement("li");
+		let linkElem = document.createElement("a");
+		linkElem.textContent = heading.title;
+		linkElem.setAttribute("href", heading.url);
+		listItem.appendChild(linkElem);
+		queue[queue.length-1].appendChild(listItem);
+	}
+
+	while(queue.length > 1){
+		let last = queue.pop();
+		queue[queue.length-1].appendChild(last);
+	}
+
+	// when finished, should have queue == [tocElement]
+	tocElement.style.opacity = 1;
+	tocElement.style.height = toc.offsetHeight + "px";
+}
+
+/* GETELEMENTSBYTAGNAMES
+ * Returns all children of `parentElement` with any of the provided tags, in
+ * document order.
+ */
+function getElementsByTagNames(parentElement, tagNames){
+	// get all tags
+	var elements = [];
+	tagNames.forEach(function(tag){
+		var result = parentElement.getElementsByTagName(tag);
+		elements = elements.concat([].slice.call(result));
+	});
+	
+	// sort elements in document order
+	return elements.sort(documentOrderComparator);
+}
+
+/* DOCUMENTORDERCOMPARATOR
+ * Returns +1 if `a` follows `b`, -1 if `a` precedes `b`, or 0 otherwise.
+ */
+function documentOrderComparator(a, b){
+	// identity check
+	if(a == b) return 0;
+	// compare positions
+	var position = a.compareDocumentPosition(b);
+	if(position & 20) return -1;
+	if(position & 10) return 1;
+	return 0;
+}
+window.onload = function(){
+	buildTableOfContents(document.getElementById("toc"));
+}
+</script>
+</head>
+
+<body>
+
+<!-- CONTENT ------------------------------------------------------------------>
+
+<!-- HEADER -->
+<div id="header-box">
+	<nav id="header">
+	<ul id="header-nav">
+		<li>
+			<a id="header-name" href="https://benrbray.com/">Benjamin R. Bray</a>
+		</li>
+		<li><a href="/blog">WRITING</a></li>
+		<li><a href="/projects">PROJECTS</a></li>
+		<li><a href="/resources">RESOURCES</a></li>
+		<li><a href="/resume.pdf">RESUME</a></li>
+	</ul>
+	</nav>
+</div>
+
+<!-- PRECONTENT -->
+<div id="pre-content">
+<!-- Article Banner Image -->
+</div>
+
+<div id="page">
+	
+	<!-- CONTENT -->
+	<div id="content">
+
+<div class="center">
+
+<!-- Post Header -->
+<header class="article-header">
+	<h1 class="article-title">Backbite Algorithm for Sampling Hamiltonian Paths</h1>
+	<div class="article-info">
+		<!-- Date -->
+		<div class="article-date">
+			Posted in algorithms on March 23, 2020
+		</div>
+		<!-- Tags / Tools -->
+			<nav class="article-tags">
+<a href="/tag/algorithms">algorithms</a><a href="/tag/graph-theory">graph-theory</a>					<a class="tool">typescript</a>
+					<a class="tool"> svg</a>
+			</nav>
+	</div>
+</header>
+
+<!-- Table of Contents (Requires JavaScript) -->
+<div id="toc" class="displaynone"></div>
+
+<!-- Post Context -->
+<div class="article-content">
+	<div id="post-body">
+	<h2>Backbite Algorithm for Sampling Hamiltonian Paths</h2>
+
+<script src="/static/boggle/dictionary.js"></script>
+
+<script src="/static/boggle/WordTrie.js"></script>
+
+<script src="/static/boggle/boggle.js" defer></script>
+
+<script src="https://d3js.org/d3.v5.min.js"></script>
+
+<style>
+line {
+    shape-rendering: crispEdges;
+}
+
+.hampath {
+    stroke-width: 5;
+    fill: none;
+}
+
+/*#backbite-example {
+    display: grid;
+    grid: 1fr 1fr / 1fr 1fr;
+    grid-gap: 1em 0;
+    grid-auto-flow: row;
+    max-width: 100%;
+    counter-reset: fignum;
+}
+
+@media (max-width: 600px) {
+    #backbite-example {
+        grid: 1fr / 1fr;
+    }
+}*/
+
+figure svg {
+    display: block;
+    margin: 0 auto;
+    max-width: min(100%, 80vw);
+}
+
+tt {
+    background-color: #ccc;
+}
+
+
+text.pathArrows {
+    font-size: 48px;
+    dominant-baseline: central;
+    user-select: none;
+}
+</style>
+
+<h3>Hamiltonian Paths</h3>
+
+<p>A <a href="https://en.wikipedia.org/wiki/Hamiltonian_path"><dfn>Hamiltonian path</dfn></a> in a graph $G=(V,E)$ is a path $p$ which visits each vertex exactly once.  Determining whether a Hamiltonian path <a href="https://en.wikipedia.org/wiki/Hamiltonian_path_problem">exists</a> is an NP-complete decision problem, even if we restrict our attention to graphs with special structure, such as <a href="http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.383.1078">subsets of grid graphs</a>.
+
+A Hamiltonian graph may have more than one Hamiltonian path.  Suppose we have a graph $G=(V,E)$ that we <b>know</b> is Hamiltonian, perhaps because we already have a Hamiltonian path $p$.  Is it possible to sample a random Hamiltonian path uniformly at random from $G$?
+
+<h3>Animated Visualization</h3>
+
+<figure>
+    <svg id="backbite-demo"></svg>
+</figure>
+
+<p><em>Minor Implementation Detail:</em>  Although I use the backbite algorithm for <em>Long Word</em> randomization, I don't run the algorithm long enough to achieve a uniformly random Hamiltonian path.</p>
+
+<h3>Algorithm Overview</h3>
+
+<figure role="group">
+    <div id="backbite-example" class="img-gallery col-2">
+        <figure>
+            <svg></svg>
+            <figcaption>The backbite algorithm starts by randomly choosing one endpoint of a valid <span style="color:blue">hamiltonian path</span>.</figcaption>
+        </figure>
+        <figure>
+            <svg></svg>
+            <figcaption>Next, we <span style="color:green">connect</span> the endpoint to a random neighbor <tt>v</tt>.  To maintain the Hamiltonian path, one of <tt>v</tt>'s two incident edges must be removed.  </figcaption>
+        </figure>
+        <figure>
+            <svg></svg>
+            <figcaption>One choice will always disconnect the path, creating a <span style="color:red">loop</span>.  So, we should choose the other edge!</figcaption>
+        </figure>
+        <figure>
+            <svg></svg>
+            <figcaption>Deleting the other edge results in a <span style="color:green">new hamiltonian path</span>, as desired.  Notice that one endpoint has changed!</figcaption>
+        </figure>
+    </div>
+</figure>
+
+<h3>Implementation:  Linked List Path</h3>
+
+<p>There are a number of different possible implementations, depending on how we choose to represent the graph <span class="math">\(G\)</span> and the path <span class="math">\(h\)</span>.</p>
+<dl>
+    <dt>Adjacency Matrix</dt>
+    <dd>asdfasdf</dd>
+    <dt>Adjacency List</dt>
+    <dd>asdfasdf</dd>
+    <dt>Implicit Graph</dt>
+    <dd>asdfasdf</dd>
+</dl>
+
+<h4>Detail:  Cycle Detection</h3>
+<h4>Detail:  Path Reversal</h3>
+
+<p>As an aside, the problem of determining whether a graph $G$ contains a Hamiltonian path (or cycle) is <a href="https://en.wikipedia.org/wiki/NP-completeness">NP-complete</a>.  The standard proof involves a reduction from 3-SAT!  By encoding the Hamiltonian path problem as a satisfiability problem, we can again use <tt>minisat.js</tt> to search for a solution.</p>
+	</div>
+</div>
+
+</div>
+	</div>
+
+	<!-- Page Footer -->
+	<div id="page-footer">
+		<span style="float: left; vertical-align: middle">
+			<img id="visitor-count" src="https://hitcounter.pythonanywhere.com/count/tag.svg" alt="Hits">
+			Powered by <a href="http://blog.getpelican.com/">Pelican</a> and hosted on <a href="https://github.com/benrbray/benrbray.github.io-source">GitHub</a>.
+		</span>
+		<span style="float: right">
+			Last updated on August 08, 2020
+		</span>
+	</div>
+</div>
+
+</body>
+</html>

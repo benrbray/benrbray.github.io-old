@@ -521,6 +521,8 @@ export class GridGameElement extends HTMLElement {
 	}
 
 	getCell(row, col){
+		if(row >= this.numRows){ return null; }
+		if(col >= this.numCols){ return null; }
 		return this.boardBody.children[row].children[col];
 	}
 
@@ -553,7 +555,10 @@ export class GridGameElement extends HTMLElement {
 		this.highlightCells = [];
 		for(let k = 0; k < coords.length; k++){
 			let pos = coords[k];
+			
 			let cell = this.getCell(pos[0], pos[1]);
+			if(cell == null){ continue; }
+
 			this.highlightCells.push(cell);
 			cell.classList.add("highlight");
 		}
@@ -615,6 +620,7 @@ export class GridGameElement extends HTMLElement {
 		let abort = false;
 		abort = abort || (col < 0 || col >= this.numCols);
 		abort = abort || (contiguous && (row < 0 || row >= this.numRows));
+		abort = abort || (contiguous && this.cellDisabled(row, col));
 		if(abort){ this.unhighlight(); return; }
 		
 		// highlight rows [a, b) of this column

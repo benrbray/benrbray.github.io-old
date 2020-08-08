@@ -1,5 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Benjamin R. Bray - articles</title><link href="https://benrbray.com/" rel="alternate"></link><link href="http://localhost:8000/feeds/articles.atom.xml" rel="self"></link><id>https://benrbray.com/</id><updated>2020-03-18T00:00:00-04:00</updated><entry><title>Collision Detection: Convex Geometry</title><link href="https://benrbray.com/posts/2020/collision-detection-convex-geometry" rel="alternate"></link><published>2020-03-18T00:00:00-04:00</published><updated>2020-03-18T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2020-03-18:/posts/2020/collision-detection-convex-geometry</id><summary type="html">Working with convex polygons.</summary><content type="html">
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Benjamin R. Bray - articles</title><link href="https://benrbray.com/" rel="alternate"></link><link href="http://localhost:8000/feeds/articles.atom.xml" rel="self"></link><id>https://benrbray.com/</id><updated>2020-03-20T00:00:00-04:00</updated><entry><title>About This Website</title><link href="https://benrbray.com/posts/2020/about-this-website" rel="alternate"></link><published>2020-03-20T00:00:00-04:00</published><updated>2020-03-20T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2020-03-20:/posts/2020/about-this-website</id><summary type="html">&lt;p&gt;Things I learned while making this website.  Web standards change quickly!&lt;/p&gt;</summary><content type="html">&lt;h1&gt;Overview&lt;/h1&gt;
+&lt;p&gt;This is a static website hosted with &lt;a href="https://pages.github.com/"&gt;GitHub Pages&lt;/a&gt;.  I use &lt;a href="https://blog.getpelican.com/"&gt;Pelican&lt;/a&gt; to convert Markdown&lt;/p&gt;
+&lt;p&gt;Modern HTML/CSS are extremely expressive, so I avoid using JavaScript as much as possible.  When JavaScript would allow for more interactivity than possible using HTML/CSS alone, I always try to include a fallback for users who choose to disable JS for security or performance reasons.&lt;/p&gt;
+&lt;p&gt;Before this redesign, my personal site, like many others, had been perpetually under construction.&lt;/p&gt;
+&lt;h1&gt;Layout&lt;/h1&gt;
+&lt;p&gt;CSS Grid and Flexbox&lt;/p&gt;
+&lt;h1&gt;Animations&lt;/h1&gt;
+&lt;p&gt;CSS Animations for Boggle&lt;/p&gt;
+&lt;h1&gt;JavaScript&lt;/h1&gt;
+&lt;p&gt;There are some nice &lt;a href="https://2ality.com/2015/04/numbers-math-es6.html"&gt;new number and math features&lt;/a&gt; in ES6!&lt;/p&gt;
+&lt;h1&gt;&lt;/h1&gt;
+&lt;h1&gt;React&lt;/h1&gt;
+&lt;h1&gt;TypeScript&lt;/h1&gt;
+&lt;p&gt;Parcel
+&lt;a href="https://technicallyrural.ca/2017/09/02/how-to-run-typescript-in-the-browser/"&gt;How to Run TypeScript in the Browser&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href="http://www.thinkingincrowd.me/2016/01/02/Modulization-and-Bundling-with-TypeScript-and-Webpack-for-JS-Full-Stack-Project/"&gt;Modulization and Bundling with TypeScript and Webpack&lt;/a&gt;&lt;/p&gt;
+&lt;h1&gt;Interactive Diagrams&lt;/h1&gt;
+&lt;p&gt;React, JSX&lt;/p&gt;</content><category term="web-dev"></category></entry><entry><title>Collision Detection: Convex Geometry</title><link href="https://benrbray.com/posts/2020/collision-detection-convex-geometry" rel="alternate"></link><published>2020-03-18T00:00:00-04:00</published><updated>2020-03-18T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2020-03-18:/posts/2020/collision-detection-convex-geometry</id><summary type="html">Working with convex polygons.</summary><content type="html">
 
 &lt;script src="/static/geom/dist/index.js"&gt;&lt;/script&gt;
 
@@ -17,9 +34,20 @@
 	0% { stroke-dashoffset: 0; }
 	100%{ stroke-dashoffset: 8; }
 }
+
+svg .rotatable, svg .draggable {
+	cursor: grab;
+}
 &lt;/style&gt;
 
+&lt;h3&gt;Figure 1&lt;/h3&gt;
 &lt;div id="fig1" style="border: 1px solid gray"&gt;&lt;/div&gt;
+&lt;h3&gt;Figure 2&lt;/h3&gt;
+&lt;div id="fig2" style="border: 1px solid gray"&gt;&lt;/div&gt;
+&lt;h3&gt;Figure 3&lt;/h3&gt;
+&lt;div id="fig3" style="border: 1px solid gray"&gt;&lt;/div&gt;
+&lt;h3&gt;Figure 4&lt;/h3&gt;
+&lt;div id="fig4" style="border: 1px solid gray"&gt;&lt;/div&gt;
 
 &lt;svg viewbox="0 0 500 150" xmlns="http://www.w3.org/2000/svg"&gt;
     &lt;defs&gt;
@@ -59,7 +87,18 @@ Convex Hull
 	* Graham Scan
 	* Quickhull
 	* Chan's Algorithm
-* Convex Hull of a Simple Polygon
+	* Melkman [Online Convex Hull](https://www.ime.usp.br/~walterfm/cursos/mac0331/2006/melkman.pdf)
+	* Notes, [Melkman's Convex Hull](http://www.ams.sunysb.edu/~jsbm/courses/345/13/melkman.pdf)
+* [Convex Hull of a Simple Polygon](https://en.wikipedia.org/wiki/Convex_hull_of_a_simple_polygon#cite_note-aloupis-6)
+	* David, [Online Construction of Convex Hull of Simple Polyline](http://w3.impa.br/~rdcastan/Cgeometry/index.html)
+
+Misc
+* [CS 763 Project](https://cs.uwaterloo.ca/~alubiw/CS763/project.html/)
+* Eppstein, ["Guard Placement for Efficient Point-in-Polygon Proofs"](https://dl-acm-org.prx.library.gatech.edu/doi/10.1145/1247069.1247075)
+* Lin 2005, [Approximate Convex Decomposition of Polygons](https://www-sciencedirect-com.prx.library.gatech.edu/science/article/pii/S0925772105001008)
+* Zuckerberger 2002, [Polyhedral Surface Decomposition with Applications](https://www-sciencedirect-com.prx.library.gatech.edu/science/article/pii/S0097849302001280)
+* Chan 2001, [Dynamic planar convex hull operations in near-logarithmic amortized time](https://dl.acm.org/doi/10.1145/363647.363652)
+* Avis 1997, [How Good are Convex Hull Algorithms?](https://www.sciencedirect.com/science/article/pii/S0925772196000235)
 
 Cutting Shapes
 

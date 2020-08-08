@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Benjamin R. Bray - algorithms</title><link href="https://benrbray.com/" rel="alternate"></link><link href="http://localhost:8000/feeds/algorithms.atom.xml" rel="self"></link><id>https://benrbray.com/</id><updated>2020-03-23T00:00:00-04:00</updated><entry><title>Backbite Algorithm for Sampling Hamiltonian Paths</title><link href="https://benrbray.com/posts/2020/backbite-algorithm-for-sampling-hamiltonian-paths" rel="alternate"></link><published>2020-03-23T00:00:00-04:00</published><updated>2020-03-23T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2020-03-23:/posts/2020/backbite-algorithm-for-sampling-hamiltonian-paths</id><summary type="html">&lt;p&gt;A Hamiltonian graph may have more than one Hamiltonian path.  Suppose we have a graph &lt;span class="math"&gt;\(G=(V,E)\)&lt;/span&gt; that we &lt;b&gt;know&lt;/b&gt; is Hamiltonian, perhaps because we already have a Hamiltonian path &lt;span class="math"&gt;\(p\)&lt;/span&gt;.  Is it possible to sample a random Hamiltonian path uniformly at random from &lt;span class="math"&gt;\(G\)&lt;/span&gt;?&lt;/p&gt;</summary><content type="html">&lt;h2&gt;Backbite Algorithm for Sampling Hamiltonian Paths&lt;/h2&gt;
+
+&lt;script src="/static/boggle/dictionary.js"&gt;&lt;/script&gt;
+
+&lt;script src="/static/boggle/WordTrie.js"&gt;&lt;/script&gt;
+
+&lt;script src="/static/boggle/boggle.js" defer&gt;&lt;/script&gt;
+
+&lt;script src="https://d3js.org/d3.v5.min.js"&gt;&lt;/script&gt;
+
+&lt;style&gt;
+line {
+    shape-rendering: crispEdges;
+}
+
+.hampath {
+    stroke-width: 5;
+    fill: none;
+}
+
+/*#backbite-example {
+    display: grid;
+    grid: 1fr 1fr / 1fr 1fr;
+    grid-gap: 1em 0;
+    grid-auto-flow: row;
+    max-width: 100%;
+    counter-reset: fignum;
+}
+
+@media (max-width: 600px) {
+    #backbite-example {
+        grid: 1fr / 1fr;
+    }
+}*/
+
+figure svg {
+    display: block;
+    margin: 0 auto;
+    max-width: min(100%, 80vw);
+}
+
+tt {
+    background-color: #ccc;
+}
+
+
+text.pathArrows {
+    font-size: 48px;
+    dominant-baseline: central;
+    user-select: none;
+}
+&lt;/style&gt;
+
+&lt;h3&gt;Hamiltonian Paths&lt;/h3&gt;
+
+&lt;p&gt;A &lt;a href="https://en.wikipedia.org/wiki/Hamiltonian_path"&gt;&lt;dfn&gt;Hamiltonian path&lt;/dfn&gt;&lt;/a&gt; in a graph $G=(V,E)$ is a path $p$ which visits each vertex exactly once.  Determining whether a Hamiltonian path &lt;a href="https://en.wikipedia.org/wiki/Hamiltonian_path_problem"&gt;exists&lt;/a&gt; is an NP-complete decision problem, even if we restrict our attention to graphs with special structure, such as &lt;a href="http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.383.1078"&gt;subsets of grid graphs&lt;/a&gt;.
+
+A Hamiltonian graph may have more than one Hamiltonian path.  Suppose we have a graph $G=(V,E)$ that we &lt;b&gt;know&lt;/b&gt; is Hamiltonian, perhaps because we already have a Hamiltonian path $p$.  Is it possible to sample a random Hamiltonian path uniformly at random from $G$?
+
+&lt;h3&gt;Animated Visualization&lt;/h3&gt;
+
+&lt;figure&gt;
+    &lt;svg id="backbite-demo"&gt;&lt;/svg&gt;
+&lt;/figure&gt;
+
+&lt;p&gt;&lt;em&gt;Minor Implementation Detail:&lt;/em&gt;  Although I use the backbite algorithm for &lt;em&gt;Long Word&lt;/em&gt; randomization, I don't run the algorithm long enough to achieve a uniformly random Hamiltonian path.&lt;/p&gt;
+
+&lt;h3&gt;Algorithm Overview&lt;/h3&gt;
+
+&lt;figure role="group"&gt;
+    &lt;div id="backbite-example" class="img-gallery col-2"&gt;
+        &lt;figure&gt;
+            &lt;svg&gt;&lt;/svg&gt;
+            &lt;figcaption&gt;The backbite algorithm starts by randomly choosing one endpoint of a valid &lt;span style="color:blue"&gt;hamiltonian path&lt;/span&gt;.&lt;/figcaption&gt;
+        &lt;/figure&gt;
+        &lt;figure&gt;
+            &lt;svg&gt;&lt;/svg&gt;
+            &lt;figcaption&gt;Next, we &lt;span style="color:green"&gt;connect&lt;/span&gt; the endpoint to a random neighbor &lt;tt&gt;v&lt;/tt&gt;.  To maintain the Hamiltonian path, one of &lt;tt&gt;v&lt;/tt&gt;'s two incident edges must be removed.  &lt;/figcaption&gt;
+        &lt;/figure&gt;
+        &lt;figure&gt;
+            &lt;svg&gt;&lt;/svg&gt;
+            &lt;figcaption&gt;One choice will always disconnect the path, creating a &lt;span style="color:red"&gt;loop&lt;/span&gt;.  So, we should choose the other edge!&lt;/figcaption&gt;
+        &lt;/figure&gt;
+        &lt;figure&gt;
+            &lt;svg&gt;&lt;/svg&gt;
+            &lt;figcaption&gt;Deleting the other edge results in a &lt;span style="color:green"&gt;new hamiltonian path&lt;/span&gt;, as desired.  Notice that one endpoint has changed!&lt;/figcaption&gt;
+        &lt;/figure&gt;
+    &lt;/div&gt;
+&lt;/figure&gt;
+
+&lt;h3&gt;Implementation:  Linked List Path&lt;/h3&gt;
+
+&lt;p&gt;There are a number of different possible implementations, depending on how we choose to represent the graph &lt;span class="math"&gt;\(G\)&lt;/span&gt; and the path &lt;span class="math"&gt;\(h\)&lt;/span&gt;.&lt;/p&gt;
+&lt;dl&gt;
+    &lt;dt&gt;Adjacency Matrix&lt;/dt&gt;
+    &lt;dd&gt;asdfasdf&lt;/dd&gt;
+    &lt;dt&gt;Adjacency List&lt;/dt&gt;
+    &lt;dd&gt;asdfasdf&lt;/dd&gt;
+    &lt;dt&gt;Implicit Graph&lt;/dt&gt;
+    &lt;dd&gt;asdfasdf&lt;/dd&gt;
+&lt;/dl&gt;
+
+&lt;h4&gt;Detail:  Cycle Detection&lt;/h3&gt;
+&lt;h4&gt;Detail:  Path Reversal&lt;/h3&gt;
+
+&lt;p&gt;As an aside, the problem of determining whether a graph $G$ contains a Hamiltonian path (or cycle) is &lt;a href="https://en.wikipedia.org/wiki/NP-completeness"&gt;NP-complete&lt;/a&gt;.  The standard proof involves a reduction from 3-SAT!  By encoding the Hamiltonian path problem as a satisfiability problem, we can again use &lt;tt&gt;minisat.js&lt;/tt&gt; to search for a solution.&lt;/p&gt;</content><category term="algorithms"></category><category term="graph-theory"></category></entry></feed>

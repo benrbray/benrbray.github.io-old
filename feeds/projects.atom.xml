@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Benjamin R. Bray - projects</title><link href="https://benrbray.com/" rel="alternate"></link><link href="http://localhost:8000/feeds/projects.atom.xml" rel="self"></link><id>https://benrbray.com/</id><updated>2020-03-20T00:00:00-04:00</updated><entry><title>Real-time Game Physics</title><link href="https://benrbray.com/posts/2020/real-time-game-physics" rel="alternate"></link><published>2020-03-20T00:00:00-04:00</published><updated>2020-03-20T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2020-03-20:/posts/2020/real-time-game-physics</id><summary type="html">&lt;p&gt;Real-time Game Physics&lt;/p&gt;</summary><content type="html">&lt;h1&gt;Articles&lt;/h1&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Benjamin R. Bray - projects</title><link href="https://benrbray.com/" rel="alternate"></link><link href="http://localhost:8000/feeds/projects.atom.xml" rel="self"></link><id>https://benrbray.com/</id><updated>2020-06-14T00:00:00-04:00</updated><entry><title>ProseMirror Math</title><link href="https://benrbray.com/posts/2020/prosemirror-math" rel="alternate"></link><published>2020-06-14T00:00:00-04:00</published><updated>2020-06-14T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2020-06-14:/posts/2020/prosemirror-math</id><summary type="html">&lt;p&gt;Schema and plugins for math editing using ProseMirror!&lt;/p&gt;</summary><content type="html"></content><category term="math"></category><category term="text-editor"></category></entry><entry><title>Real-time Game Physics</title><link href="https://benrbray.com/posts/2020/real-time-game-physics" rel="alternate"></link><published>2020-03-20T00:00:00-04:00</published><updated>2020-03-20T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2020-03-20:/posts/2020/real-time-game-physics</id><summary type="html">&lt;p&gt;Real-time Game Physics&lt;/p&gt;</summary><content type="html">&lt;h1&gt;Articles&lt;/h1&gt;
 &lt;p&gt;Collision Detection&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;Part 1:  Convex Geometry&lt;/li&gt;
@@ -250,9 +250,14 @@ Computation on 3D Game Objects&lt;/a&gt;&lt;/li&gt;
 	padding: 5px;
 	box-shadow: none!important;
 }
+.checkboxes input[type="radio"] + span:hover {
+	background-color: #e0e0e0;
+}
 .checkboxes input[type="radio"]:checked + span {
 	background-color: lightblue;
 	color: darkblue;
+}.checkboxes input[type="radio"]:checked + span:hover {
+	background-color: #89bed0;
 }
 
 .checkboxes label {
@@ -311,23 +316,12 @@ window.customElements.define("grid-game", GridGameElement);
 			&lt;span&gt;Long Word&lt;/span&gt;
 		&lt;/label&gt;
 	&lt;/div&gt;
-	&lt;!--&lt;input onclick="randomUniform()" type="button" value="Uniform"&gt;
-	&lt;input onclick="randomFreq()" type="button" value="Letter Frequency"&gt;
-	&lt;input onclick="randomWord()" type="button" value="16-Letter Word"&gt;
-	&lt;input onclick="randomDice()" type="button" value="Boggle Dice"&gt;--&gt;
-	&lt;!--&lt;div&gt;
-		&lt;label&gt;Size&lt;/label&gt;
-		&lt;input style="max-width: 2em" type="number" step="1" value="4"&gt;
-		&lt;label&gt;x&lt;/label&gt;
-		&lt;input style="max-width: 2em" type="number" step="1" value="4"&gt;
-	&lt;/div&gt;--&gt;
-	&lt;button style="grid-column-end:span 2" onclick="solveBoggle()" type="button"&gt;PLAY&lt;/button&gt;
 &lt;/div&gt;
 &lt;grid-game id="boggle-board" type="boggle"&gt;
-ABCD
-EFGH
-IJKL
-MNOP
+PYBO
+ALGG
+MELW
+HTIE
 &lt;/grid-game&gt;
 &lt;div id="boggle-list"&gt;
 	&lt;div class="wordList"&gt;&lt;/div&gt;
@@ -430,7 +424,10 @@ Unit Propagation, Clause Learning, DPLL, CDCL
 
 &lt;p&gt;The &lt;em&gt;Long Words&lt;/em&gt; randomization option above selects a random word of sixteen letters or more and snakes it through the grid in such a way that the chosen word forms a valid Boggle path.  For sixteen-letter words on a 4x4 grid, it would have been easy enough to sample one of several pre-determined paths through the grid, but I wanted a more general solution for arbitrarily large boggle boards.  
 
-&lt;p&gt;So, given an $M \times N$ grid, how do we randomly sample a valid Boggle path?  Board-exhausting Boggle paths are actually Hamiltonian paths in disguise, and we can use the backbite algorithm to randomly sample them!
+&lt;p&gt;So, given an $M \times N$ grid, how do we randomly sample a valid Boggle path?  Board-exhausting Boggle paths are actually Hamiltonian paths in disguise, and we can use the backbite algorithm to randomly sample them!&lt;/p&gt;
+
+&lt;svg id="backbite-demo"&gt;&lt;/svg&gt;
+&lt;script src="https://d3js.org/d3.v5.min.js"&gt;&lt;/script&gt;
 
 &lt;p&gt;&lt;em&gt;Minor Implementation Detail:&lt;/em&gt;  Although I use the backbite algorithm for &lt;em&gt;Long Word&lt;/em&gt; randomization, I don't run the algorithm long enough to achieve a uniformly random Hamiltonian path.
 

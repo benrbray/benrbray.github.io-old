@@ -1,5 +1,127 @@
 <?xml version="1.0" encoding="utf-8"?>
-<feed xmlns="http://www.w3.org/2005/Atom"><title>Benjamin R. Bray</title><link href="https://benrbray.com/" rel="alternate"></link><link href="http://localhost:8000/feed.atom" rel="self"></link><id>https://benrbray.com/</id><updated>2020-03-20T00:00:00-04:00</updated><entry><title>Real-time Game Physics</title><link href="https://benrbray.com/posts/2020/real-time-game-physics" rel="alternate"></link><published>2020-03-20T00:00:00-04:00</published><updated>2020-03-20T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2020-03-20:/posts/2020/real-time-game-physics</id><summary type="html">&lt;p&gt;Real-time Game Physics&lt;/p&gt;</summary><content type="html">&lt;h1&gt;Articles&lt;/h1&gt;
+<feed xmlns="http://www.w3.org/2005/Atom"><title>Benjamin R. Bray</title><link href="https://benrbray.com/" rel="alternate"></link><link href="http://localhost:8000/feed.atom" rel="self"></link><id>https://benrbray.com/</id><updated>2020-06-14T00:00:00-04:00</updated><entry><title>ProseMirror Math</title><link href="https://benrbray.com/posts/2020/prosemirror-math" rel="alternate"></link><published>2020-06-14T00:00:00-04:00</published><updated>2020-06-14T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2020-06-14:/posts/2020/prosemirror-math</id><summary type="html">&lt;p&gt;Schema and plugins for math editing using ProseMirror!&lt;/p&gt;</summary><content type="html"></content><category term="math"></category><category term="text-editor"></category></entry><entry><title>Backbite Algorithm for Sampling Hamiltonian Paths</title><link href="https://benrbray.com/posts/2020/backbite-algorithm-for-sampling-hamiltonian-paths" rel="alternate"></link><published>2020-03-23T00:00:00-04:00</published><updated>2020-03-23T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2020-03-23:/posts/2020/backbite-algorithm-for-sampling-hamiltonian-paths</id><summary type="html">&lt;p&gt;A Hamiltonian graph may have more than one Hamiltonian path.  Suppose we have a graph &lt;span class="math"&gt;\(G=(V,E)\)&lt;/span&gt; that we &lt;b&gt;know&lt;/b&gt; is Hamiltonian, perhaps because we already have a Hamiltonian path &lt;span class="math"&gt;\(p\)&lt;/span&gt;.  Is it possible to sample a random Hamiltonian path uniformly at random from &lt;span class="math"&gt;\(G\)&lt;/span&gt;?&lt;/p&gt;</summary><content type="html">&lt;h2&gt;Backbite Algorithm for Sampling Hamiltonian Paths&lt;/h2&gt;
+
+&lt;script src="/static/boggle/dictionary.js"&gt;&lt;/script&gt;
+
+&lt;script src="/static/boggle/WordTrie.js"&gt;&lt;/script&gt;
+
+&lt;script src="/static/boggle/boggle.js" defer&gt;&lt;/script&gt;
+
+&lt;script src="https://d3js.org/d3.v5.min.js"&gt;&lt;/script&gt;
+
+&lt;style&gt;
+line {
+    shape-rendering: crispEdges;
+}
+
+.hampath {
+    stroke-width: 5;
+    fill: none;
+}
+
+/*#backbite-example {
+    display: grid;
+    grid: 1fr 1fr / 1fr 1fr;
+    grid-gap: 1em 0;
+    grid-auto-flow: row;
+    max-width: 100%;
+    counter-reset: fignum;
+}
+
+@media (max-width: 600px) {
+    #backbite-example {
+        grid: 1fr / 1fr;
+    }
+}*/
+
+figure svg {
+    display: block;
+    margin: 0 auto;
+    max-width: min(100%, 80vw);
+}
+
+tt {
+    background-color: #ccc;
+}
+
+
+text.pathArrows {
+    font-size: 48px;
+    dominant-baseline: central;
+    user-select: none;
+}
+&lt;/style&gt;
+
+&lt;h3&gt;Hamiltonian Paths&lt;/h3&gt;
+
+&lt;p&gt;A &lt;a href="https://en.wikipedia.org/wiki/Hamiltonian_path"&gt;&lt;dfn&gt;Hamiltonian path&lt;/dfn&gt;&lt;/a&gt; in a graph $G=(V,E)$ is a path $p$ which visits each vertex exactly once.  Determining whether a Hamiltonian path &lt;a href="https://en.wikipedia.org/wiki/Hamiltonian_path_problem"&gt;exists&lt;/a&gt; is an NP-complete decision problem, even if we restrict our attention to graphs with special structure, such as &lt;a href="http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.383.1078"&gt;subsets of grid graphs&lt;/a&gt;.
+
+A Hamiltonian graph may have more than one Hamiltonian path.  Suppose we have a graph $G=(V,E)$ that we &lt;b&gt;know&lt;/b&gt; is Hamiltonian, perhaps because we already have a Hamiltonian path $p$.  Is it possible to sample a random Hamiltonian path uniformly at random from $G$?
+
+&lt;h3&gt;Animated Visualization&lt;/h3&gt;
+
+&lt;figure&gt;
+    &lt;svg id="backbite-demo"&gt;&lt;/svg&gt;
+&lt;/figure&gt;
+
+&lt;p&gt;&lt;em&gt;Minor Implementation Detail:&lt;/em&gt;  Although I use the backbite algorithm for &lt;em&gt;Long Word&lt;/em&gt; randomization, I don't run the algorithm long enough to achieve a uniformly random Hamiltonian path.&lt;/p&gt;
+
+&lt;h3&gt;Algorithm Overview&lt;/h3&gt;
+
+&lt;figure role="group"&gt;
+    &lt;div id="backbite-example" class="img-gallery col-2"&gt;
+        &lt;figure&gt;
+            &lt;svg&gt;&lt;/svg&gt;
+            &lt;figcaption&gt;The backbite algorithm starts by randomly choosing one endpoint of a valid &lt;span style="color:blue"&gt;hamiltonian path&lt;/span&gt;.&lt;/figcaption&gt;
+        &lt;/figure&gt;
+        &lt;figure&gt;
+            &lt;svg&gt;&lt;/svg&gt;
+            &lt;figcaption&gt;Next, we &lt;span style="color:green"&gt;connect&lt;/span&gt; the endpoint to a random neighbor &lt;tt&gt;v&lt;/tt&gt;.  To maintain the Hamiltonian path, one of &lt;tt&gt;v&lt;/tt&gt;'s two incident edges must be removed.  &lt;/figcaption&gt;
+        &lt;/figure&gt;
+        &lt;figure&gt;
+            &lt;svg&gt;&lt;/svg&gt;
+            &lt;figcaption&gt;One choice will always disconnect the path, creating a &lt;span style="color:red"&gt;loop&lt;/span&gt;.  So, we should choose the other edge!&lt;/figcaption&gt;
+        &lt;/figure&gt;
+        &lt;figure&gt;
+            &lt;svg&gt;&lt;/svg&gt;
+            &lt;figcaption&gt;Deleting the other edge results in a &lt;span style="color:green"&gt;new hamiltonian path&lt;/span&gt;, as desired.  Notice that one endpoint has changed!&lt;/figcaption&gt;
+        &lt;/figure&gt;
+    &lt;/div&gt;
+&lt;/figure&gt;
+
+&lt;h3&gt;Implementation:  Linked List Path&lt;/h3&gt;
+
+&lt;p&gt;There are a number of different possible implementations, depending on how we choose to represent the graph &lt;span class="math"&gt;\(G\)&lt;/span&gt; and the path &lt;span class="math"&gt;\(h\)&lt;/span&gt;.&lt;/p&gt;
+&lt;dl&gt;
+    &lt;dt&gt;Adjacency Matrix&lt;/dt&gt;
+    &lt;dd&gt;asdfasdf&lt;/dd&gt;
+    &lt;dt&gt;Adjacency List&lt;/dt&gt;
+    &lt;dd&gt;asdfasdf&lt;/dd&gt;
+    &lt;dt&gt;Implicit Graph&lt;/dt&gt;
+    &lt;dd&gt;asdfasdf&lt;/dd&gt;
+&lt;/dl&gt;
+
+&lt;h4&gt;Detail:  Cycle Detection&lt;/h3&gt;
+&lt;h4&gt;Detail:  Path Reversal&lt;/h3&gt;
+
+&lt;p&gt;As an aside, the problem of determining whether a graph $G$ contains a Hamiltonian path (or cycle) is &lt;a href="https://en.wikipedia.org/wiki/NP-completeness"&gt;NP-complete&lt;/a&gt;.  The standard proof involves a reduction from 3-SAT!  By encoding the Hamiltonian path problem as a satisfiability problem, we can again use &lt;tt&gt;minisat.js&lt;/tt&gt; to search for a solution.&lt;/p&gt;</content><category term="algorithms"></category><category term="graph-theory"></category></entry><entry><title>About This Website</title><link href="https://benrbray.com/posts/2020/about-this-website" rel="alternate"></link><published>2020-03-20T00:00:00-04:00</published><updated>2020-03-20T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2020-03-20:/posts/2020/about-this-website</id><summary type="html">&lt;p&gt;Things I learned while making this website.  Web standards change quickly!&lt;/p&gt;</summary><content type="html">&lt;h1&gt;Overview&lt;/h1&gt;
+&lt;p&gt;This is a static website hosted with &lt;a href="https://pages.github.com/"&gt;GitHub Pages&lt;/a&gt;.  I use &lt;a href="https://blog.getpelican.com/"&gt;Pelican&lt;/a&gt; to convert Markdown&lt;/p&gt;
+&lt;p&gt;Modern HTML/CSS are extremely expressive, so I avoid using JavaScript as much as possible.  When JavaScript would allow for more interactivity than possible using HTML/CSS alone, I always try to include a fallback for users who choose to disable JS for security or performance reasons.&lt;/p&gt;
+&lt;p&gt;Before this redesign, my personal site, like many others, had been perpetually under construction.&lt;/p&gt;
+&lt;h1&gt;Layout&lt;/h1&gt;
+&lt;p&gt;CSS Grid and Flexbox&lt;/p&gt;
+&lt;h1&gt;Animations&lt;/h1&gt;
+&lt;p&gt;CSS Animations for Boggle&lt;/p&gt;
+&lt;h1&gt;JavaScript&lt;/h1&gt;
+&lt;p&gt;There are some nice &lt;a href="https://2ality.com/2015/04/numbers-math-es6.html"&gt;new number and math features&lt;/a&gt; in ES6!&lt;/p&gt;
+&lt;h1&gt;&lt;/h1&gt;
+&lt;h1&gt;React&lt;/h1&gt;
+&lt;h1&gt;TypeScript&lt;/h1&gt;
+&lt;p&gt;Parcel
+&lt;a href="https://technicallyrural.ca/2017/09/02/how-to-run-typescript-in-the-browser/"&gt;How to Run TypeScript in the Browser&lt;/a&gt;&lt;/p&gt;
+&lt;p&gt;&lt;a href="http://www.thinkingincrowd.me/2016/01/02/Modulization-and-Bundling-with-TypeScript-and-Webpack-for-JS-Full-Stack-Project/"&gt;Modulization and Bundling with TypeScript and Webpack&lt;/a&gt;&lt;/p&gt;
+&lt;h1&gt;Interactive Diagrams&lt;/h1&gt;
+&lt;p&gt;React, JSX&lt;/p&gt;</content><category term="web-dev"></category></entry><entry><title>Real-time Game Physics</title><link href="https://benrbray.com/posts/2020/real-time-game-physics" rel="alternate"></link><published>2020-03-20T00:00:00-04:00</published><updated>2020-03-20T00:00:00-04:00</updated><author><name>Benjamin R. Bray</name></author><id>tag:benrbray.com,2020-03-20:/posts/2020/real-time-game-physics</id><summary type="html">&lt;p&gt;Real-time Game Physics&lt;/p&gt;</summary><content type="html">&lt;h1&gt;Articles&lt;/h1&gt;
 &lt;p&gt;Collision Detection&lt;/p&gt;
 &lt;ul&gt;
 &lt;li&gt;Part 1:  Convex Geometry&lt;/li&gt;
@@ -108,9 +230,20 @@ Computation on 3D Game Objects&lt;/a&gt;&lt;/li&gt;
 	0% { stroke-dashoffset: 0; }
 	100%{ stroke-dashoffset: 8; }
 }
+
+svg .rotatable, svg .draggable {
+	cursor: grab;
+}
 &lt;/style&gt;
 
+&lt;h3&gt;Figure 1&lt;/h3&gt;
 &lt;div id="fig1" style="border: 1px solid gray"&gt;&lt;/div&gt;
+&lt;h3&gt;Figure 2&lt;/h3&gt;
+&lt;div id="fig2" style="border: 1px solid gray"&gt;&lt;/div&gt;
+&lt;h3&gt;Figure 3&lt;/h3&gt;
+&lt;div id="fig3" style="border: 1px solid gray"&gt;&lt;/div&gt;
+&lt;h3&gt;Figure 4&lt;/h3&gt;
+&lt;div id="fig4" style="border: 1px solid gray"&gt;&lt;/div&gt;
 
 &lt;svg viewbox="0 0 500 150" xmlns="http://www.w3.org/2000/svg"&gt;
     &lt;defs&gt;
@@ -150,7 +283,18 @@ Convex Hull
 	* Graham Scan
 	* Quickhull
 	* Chan's Algorithm
-* Convex Hull of a Simple Polygon
+	* Melkman [Online Convex Hull](https://www.ime.usp.br/~walterfm/cursos/mac0331/2006/melkman.pdf)
+	* Notes, [Melkman's Convex Hull](http://www.ams.sunysb.edu/~jsbm/courses/345/13/melkman.pdf)
+* [Convex Hull of a Simple Polygon](https://en.wikipedia.org/wiki/Convex_hull_of_a_simple_polygon#cite_note-aloupis-6)
+	* David, [Online Construction of Convex Hull of Simple Polyline](http://w3.impa.br/~rdcastan/Cgeometry/index.html)
+
+Misc
+* [CS 763 Project](https://cs.uwaterloo.ca/~alubiw/CS763/project.html/)
+* Eppstein, ["Guard Placement for Efficient Point-in-Polygon Proofs"](https://dl-acm-org.prx.library.gatech.edu/doi/10.1145/1247069.1247075)
+* Lin 2005, [Approximate Convex Decomposition of Polygons](https://www-sciencedirect-com.prx.library.gatech.edu/science/article/pii/S0925772105001008)
+* Zuckerberger 2002, [Polyhedral Surface Decomposition with Applications](https://www-sciencedirect-com.prx.library.gatech.edu/science/article/pii/S0097849302001280)
+* Chan 2001, [Dynamic planar convex hull operations in near-logarithmic amortized time](https://dl.acm.org/doi/10.1145/363647.363652)
+* Avis 1997, [How Good are Convex Hull Algorithms?](https://www.sciencedirect.com/science/article/pii/S0925772196000235)
 
 Cutting Shapes
 
@@ -374,9 +518,14 @@ stroke: "#000",
 	padding: 5px;
 	box-shadow: none!important;
 }
+.checkboxes input[type="radio"] + span:hover {
+	background-color: #e0e0e0;
+}
 .checkboxes input[type="radio"]:checked + span {
 	background-color: lightblue;
 	color: darkblue;
+}.checkboxes input[type="radio"]:checked + span:hover {
+	background-color: #89bed0;
 }
 
 .checkboxes label {
@@ -435,23 +584,12 @@ window.customElements.define("grid-game", GridGameElement);
 			&lt;span&gt;Long Word&lt;/span&gt;
 		&lt;/label&gt;
 	&lt;/div&gt;
-	&lt;!--&lt;input onclick="randomUniform()" type="button" value="Uniform"&gt;
-	&lt;input onclick="randomFreq()" type="button" value="Letter Frequency"&gt;
-	&lt;input onclick="randomWord()" type="button" value="16-Letter Word"&gt;
-	&lt;input onclick="randomDice()" type="button" value="Boggle Dice"&gt;--&gt;
-	&lt;!--&lt;div&gt;
-		&lt;label&gt;Size&lt;/label&gt;
-		&lt;input style="max-width: 2em" type="number" step="1" value="4"&gt;
-		&lt;label&gt;x&lt;/label&gt;
-		&lt;input style="max-width: 2em" type="number" step="1" value="4"&gt;
-	&lt;/div&gt;--&gt;
-	&lt;button style="grid-column-end:span 2" onclick="solveBoggle()" type="button"&gt;PLAY&lt;/button&gt;
 &lt;/div&gt;
 &lt;grid-game id="boggle-board" type="boggle"&gt;
-ABCD
-EFGH
-IJKL
-MNOP
+PYBO
+ALGG
+MELW
+HTIE
 &lt;/grid-game&gt;
 &lt;div id="boggle-list"&gt;
 	&lt;div class="wordList"&gt;&lt;/div&gt;
@@ -554,7 +692,10 @@ Unit Propagation, Clause Learning, DPLL, CDCL
 
 &lt;p&gt;The &lt;em&gt;Long Words&lt;/em&gt; randomization option above selects a random word of sixteen letters or more and snakes it through the grid in such a way that the chosen word forms a valid Boggle path.  For sixteen-letter words on a 4x4 grid, it would have been easy enough to sample one of several pre-determined paths through the grid, but I wanted a more general solution for arbitrarily large boggle boards.  
 
-&lt;p&gt;So, given an $M \times N$ grid, how do we randomly sample a valid Boggle path?  Board-exhausting Boggle paths are actually Hamiltonian paths in disguise, and we can use the backbite algorithm to randomly sample them!
+&lt;p&gt;So, given an $M \times N$ grid, how do we randomly sample a valid Boggle path?  Board-exhausting Boggle paths are actually Hamiltonian paths in disguise, and we can use the backbite algorithm to randomly sample them!&lt;/p&gt;
+
+&lt;svg id="backbite-demo"&gt;&lt;/svg&gt;
+&lt;script src="https://d3js.org/d3.v5.min.js"&gt;&lt;/script&gt;
 
 &lt;p&gt;&lt;em&gt;Minor Implementation Detail:&lt;/em&gt;  Although I use the backbite algorithm for &lt;em&gt;Long Word&lt;/em&gt; randomization, I don't run the algorithm long enough to achieve a uniformly random Hamiltonian path.
 
